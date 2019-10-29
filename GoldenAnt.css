@@ -1,0 +1,34 @@
+*{
+    margin: 0;
+    padding: 0;
+    list-style: none;
+    text-decoration: none;
+}
+.wrapper{
+    width: 100%;
+    margin: 0 auto;
+    height: 500px;
+    background: #cccccc;
+}
+.menuarea{
+    width: 20%;
+    height: 400px;
+    background: rgba(0,0,0,0.8);
+}
+.menuarea .menu{
+    width: 100%;
+}
+.menuarea .menu li{
+    float :left;
+    width: 100%;
+    height: 48px;
+    font-weight: 400;
+    font-size: 14px;
+    text-align: center;
+    border-bottom:1px solid #fff; 
+}
+.menuarea .menu li a{
+    display: inline-block;
+    line-height: 48px;
+    color: #fff;
+}

@@ -11,27 +11,30 @@
 
 <body>
     <div id="app">
-        <div v-on:click="saySelf('click from inner')" v-on:click.self="saySelf('click from self')">
-            　<button v-on:click="saySelf('button click')">button</button>
-            　<button v-on:click="saySelf('just button click')">button</button>
-        </div>
-        <input v-on:keyup.13="submit" /> // 监听input的输入，当输入回车时触发Submit函数（回车的keycode值为13），用于处理常见的用户输入完直接按回车键提交）
-
-        Vue.directive('on').keyCodes.f1 = 112; // 即可以使用<input v-on:keyup.f1="help" />
-        <div>dsddd</div>
-
+        <div v-if="isExist" v-my-directive="param"></div>
     </div>
 
 
     <script>
+        Vue.directive('my-directive', {
+            bind: function () {
+                console.log('bind', arguments);
+            },
+            update: function (newValue, oldValue) {
+                console.log('update', newValue, oldValue)
+            },
+            unbind: function () {
+                console.log('unbind', arguments);
+            }
+        })
         var vm = new Vue({
             el: '#app',
-            methods: {
-                saySelf(msg) {
-                    alert(msg);
-                }
+            data: {
+                param: 'first',
+                isExist: true
             }
         });
+         // -> there is a el demo
     </script>
 
 

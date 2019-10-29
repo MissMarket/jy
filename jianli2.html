@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <!-- <script src="https://cdn.staticfile.org/jquery/2.1.1/jquery.min.js"></script>
+    <script src="https://cdn.staticfile.org/twitter-bootstrap/3.3.7/js/bootstrap.min.js"></script>
+    <link href="https://cdn.staticfile.org/twitter-bootstrap/3.3.7/css/bootstrap.min.css" rel="stylesheet"> -->
+
+    <script src="js/jquery.min.js"></script>
+    <script src="bootstrap-3.3.7/dist/js/bootstrap.min.js"></script>
+    <link href="bootstrap-3.3.7/dist/css/bootstrap.min.css" rel="stylesheet">
+
+
+
+    <title>简历</title>
+</head>
+
+<body>
+    <div class="container">
+        <div class="row clearfix">
+            <div class="col-md-3 column">
+                <div class="panel panel-danger">
+                    <div class="panel-heading">
+                        <h3 class="panel-title">个人信息</h3>
+                    </div>
+                    <div class="panel-body">
+                        <img src="images/jy.jpg" class="img-responsive img-rounded img-thumbnail" alt="Cinque Terre">
+                        <address>
+                            <span class="glyphicon glyphicon-user" title="Name">金毅</span><br>
+                            <span class="glyphicon glyphicon-file" title="Age">25岁</span><br>
+                            <span class="glyphicon glyphicon-phone" title="Mobile">18362961339</span><br>
+                            <span class="glyphicon glyphicon-envelope" title="Email">970305453@qq.com</span><br>
+                            <span class="glyphicon glyphicon-home" title="Address">无锡市锡山区鹅湖镇</span>
+                        </address>
+                    </div>
+                </div>
+                <div class="panel panel-info">
+                    <div class="panel panel-heading">个人技能</div>
+                    <div class="panel-body">
+                        <div class="row">
+                            <div class="col-sm-3">
+                                <span class="text-muted">html/css</span>
+                            </div>
+                            <div class="col-sm-9">
+                                <div class="progress">
+                                    <div class="progress-bar progress-bar-striped progress-bar-success active"
+                                        style="width: 80%"></div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="col-sm-3">
+                                <span class="text-success">javascript</span>
+                            </div>
+                            <div class="col-sm-9">
+                                <div class="progress">
+                                    <div class="progress-bar progress-bar-striped progress-bar-warning active"
+                                        style="width: 75%"></div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="col-sm-3">
+                                <span class="text-success">jquery</span>
+                            </div>
+                            <div class="col-sm-9">
+                                <div class="progress">
+                                    <div class="progress-bar progress-bar-striped progress-bar-warning active"
+                                        style="width: 70%"></div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="col-sm-3">
+                                <span class="text-success">java</span>
+                            </div>
+                            <div class="col-sm-9">
+                                <div class="progress">
+                                    <div class="progress-bar progress-bar-striped progress-bar-warning active"
+                                        style="width: 70%"></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+            <div class="col-md-9 column">
+
+                <div class="panel panel-danger">
+                    <div class="panel-heading">
+                        教育与工作经历
+                    </div>
+                    <div class="panel-body">
+                        <div class="well well-lg">
+                            <p>
+                                2012年9月-2016年6月，就读于南京理工大学自动化系
+                            </p>
+                            <p>
+                                2016年7月-至今，工作于苏州莱克电气股份有限公司信息中心，担任web电子商务程序编制工程师
+                            </p>
+                        </div>
+                    </div>
+                </div>
+                <div class="panel panel-danger">
+                    <div class="panel-heading">
+                        项目经验
+                    </div>
+                    <div class="panel-body">
+                        <div class="well">
+                            <h2>会议室预约程序</h2>
+                            <p><strong>描述:</strong>
+                                该程序分为会议室管理、会议室预约、会议室审批和会议室使用统计四个页面。
+                                会议室管理页面主要功能有会议室新增、会议室资源维护（包括物品、开放状态、插图、开放时间和人数等等）。
+                                会议室预约页面主要功能有会议室的选择，会议时间段的选择。
+                                会议室审批页面根据权限开放给用户和管理员，用户可以查看会议室预约的进度；管理员可以对用户申请的会议室进行操作（包括批准、拒绝、提前占用等）。
+                                会议室使用统计页面主要功能有按照月份、年份、会议室名称等纬度进行会议室使用情况的查询。
+                            </p>
+                            <p><strong>负责:</strong>个人独立完成项目的设计开发测试,采用了SSH2框架。前端页面视图展现采用HTML/CSS、页面的逻辑与事件采用JS/jquery、采用AJAX与服务器进行数据交互。
+                                后端Struts2作为控制（controller）层，统一接收前端的action请求，并将action请求分配到对应的service业务处理层，随后将业务处理得到的结果返回前端页面。
+                                service业务（Model）层进行核心的业务逻辑处理，使用Spring的IOC容器去统一管理所有要使用的类，并将类之间的依赖关系注入。这样在一开始就完成了类的统一分配，就可以专注于业务处理。
+                                dao数据层，使用Hibernate来与数据库进行交接。
+                                通过持久化数据对象，进行对象关系的映射，并以对象的角度来访问数据库。将得到的数据存入entity实体类中并供给业务逻辑层使用。</p>
+                        </div>
+                        <div class="well well-lg">
+                            <h2>SCM供应商管理系统</h2>
+                            <p><strong>描述:</strong>该程序中有登录模块和主界面模块两个部分，主界面模块中分为左侧的菜单栏和右侧的显示栏两个区域。菜单栏中有订单管理、领料管理、送货管理、模具管理、绩效考评、询价报价、资料下载等12个大菜单，每个菜单下面平均有六七个二级菜单，每个二级菜单的内容统一在右侧显示。
+                            </p>
+                            <p><strong>负责:</strong>由两人合作完成，我负责前端页面的绘制和交互数据的拟定。在参考过去的页面布局后，前端页面视图采用HTML/CSS、bootstrap，使得页面更加美观，采用AJAX与服务器进行数据交互。将常用的js方法进行封装，增加代码的可维护性和可阅读性。
+                            </p>
+                        </div>
+                        <div class="well well-lg">
+                            <h2>产线扫描系统</h2>
+                            <p><strong>描述:</strong>该程序运用java构建客户端界面，界面有三个：登录界面、工单选择界面、工单扫描界面，用来帮助解决产线上扫描条码问题。
+                            </p>
+                            <p> <strong>负责:</strong>我负责程序中绝大部分的功能实现，包括图形界面和扫描逻辑。运用java中的swing控件创建图形用户界面，再根据事先写好的逻辑编写系统资料准备、数据获取、条码扫描、基本资料检查、条码重复检查、判断扫描模式、工位间检查、条码部署库检查、是否外部条码检查、扫描记录、报警灯处理、数据库处理等十来个模块。针对每一个模块，编写一个类去对应处理，将扫描中所需要的所有数据封装到一个数据类中，并通过该数据类实现类之间的数据传递。最后编写测试方案，和总监一起进行程序测试、程序打包、程序部署、现场测试以及bug修改等等。
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+</body>
+
+</html>
