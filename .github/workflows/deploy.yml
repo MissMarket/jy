@@ -1,0 +1,68 @@
+name: Deploy Vite Vue App to GitHub Pages
+
+on:
+  push:
+    branches: [ "master" ]  # 或你的主分支名称
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: "pages"
+  cancel-in-progress: false
+
+jobs:
+  build-deploy:
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+
+    runs-on: ubuntu-latest
+
+    steps:
+      # 1. 检出代码
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      # 2. 设置 pnpm (先于Node.js设置)
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v2
+        with:
+          version: "7"  # 自动使用最新 7.x 版本
+
+      # 3. 设置 Node.js 环境
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20.x"
+          cache: "pnpm"
+          cache-dependency-path: "pnpm-lock.yaml"
+
+      # 4. 验证 Node.js 版本
+      - name: Verify Node.js
+        run: |
+          echo "Using Node $(node -v)"
+          echo "Using npm $(npm -v)"
+          echo "Using pnpm $(pnpm -v)"  # 添加pnpm版本验证
+
+      # 5. 安装依赖
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      # 6. 构建项目
+      - name: Build with Vite
+        run: pnpm run build
+
+      # 7. 上传产物
+      - name: Upload artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: ./dist
+
+      # 8. 部署
+      - name: Deploy
+        id: deployment
+        uses: actions/deploy-pages@v4
