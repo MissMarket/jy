@@ -31,7 +31,7 @@ jobs:
       - name: Setup pnpm
         uses: pnpm/action-setup@v2
         with:
-          version: "7"  # 自动使用最新 7.x 版本
+          version: "10"  # 自动使用最新 10.x 版本
 
       # 3. 设置 Node.js 环境
       - name: Setup Node.js
