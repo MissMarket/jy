@@ -1,19 +1,23 @@
 import { defineConfig } from 'vite';
 import vue from '@vitejs/plugin-vue';
-import { createViteProxy } from './src/api/proxyConfig';
 
 // https://vitejs.dev/config/
 export default defineConfig({
     plugins: [vue()],
     base: process.env.NODE_ENV === 'production' ? '/jy/' : '/',
     build: {
-        outDir: 'dist', // 显式声明
-        emptyOutDir: true // 构建前清空目录
+        outDir: 'dist',
+        emptyOutDir: true
     },
     server: {
-        proxy: createViteProxy()
-    },
-    define: {
-        'import.meta.env.VITE_PROXY_KEY': JSON.stringify(process.env.VITE_PROXY_KEY || 'default')
+        port: 5173,
+        host: '0.0.0.0',
+        proxy: {
+            '/api': {
+                target: 'https://web.ifzq.gtimg.cn',
+                changeOrigin: true,
+                rewrite: (path) => path.replace(/^\/api/, '')
+            }
+        }
     }
 })
