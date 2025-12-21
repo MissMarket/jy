@@ -1,11 +1,14 @@
 <template>
   <div id="app">
     <h1>Vue App</h1>
+
+    <Home />
     <p>应用已加载</p>
   </div>
 </template>
 
 <script setup>
+import Home from '@/views/home/index.vue'
 // 基本组件
 </script>
 

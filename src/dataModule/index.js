@@ -1,210 +1,371 @@
-/**
- * 数据模块 - 股票指数数据管理
- */
+import stocks from './stocks.js'
+import { getData } from '../api/index.js'
+import dayjs from 'dayjs'
+
+// ==================== 私有方法 ====================
 
 /**
- * sz399997 指数配置和数据
+ * 打开或创建indexDB数据库
+ * @param {string} dbName - 数据库名称
+ * @param {string} storeName - 存储对象名称
+ * @param {number} version - 数据库版本
+ * @returns {Promise<IDBDatabase>} 数据库实例
  */
-export const SZ399997_INDEX = {
-  code: 'sz399997',
-  name: '中证1000指数',
-  fullName: '中证1000指数收益率',
-  market: '深圳',
-  exchange: 'SZSE',
-  sector: '综合指数',
-  
-  // 指数基本信息
-  basicInfo: {
-    launchDate: '2014-10-17',
-    baseDate: '2004-12-31',
-    basePoint: 1000,
-    constituents: 1000, // 成分股数量
-    weightingMethod: '自由流通市值加权',
-    
-    // 编制方案
-    sampleSpace: '全部A股中剔除中证800指数样本股后规模偏小且流动性不足的股票',
-    selectionCriteria: '综合考察总市值、成交金额等因素',
-    reviewFrequency: '每半年定期调整'
-  },
-  
-  // 最新行情数据（模拟数据）
-  latestData: {
-    currentPrice: 5687.45,
-    change: '+12.36',
-    changePercent: '+0.22%',
-    openPrice: 5675.09,
-    highPrice: 5698.23,
-    lowPrice: 5664.88,
-    volume: '2.35亿手',
-    amount: '892.6亿元',
-    turnoverRate: '1.28%',
-    pe: 18.65,
-    pb: 1.58,
-    updateTime: '2025-12-07 15:00:00'
-  },
-  
-  // 历史数据（最近几个交易日）
-  historicalData: [
-    { date: '2025-12-07', close: 5687.45, change: '+0.22%', volume: '2.35亿手' },
-    { date: '2025-12-06', close: 5675.09, change: '-0.15%', volume: '2.18亿手' },
-    { date: '2025-12-05', close: 5683.61, change: '+0.48%', volume: '2.42亿手' },
-    { date: '2025-12-04', close: 5656.51, change: '-0.32%', volume: '2.05亿手' },
-    { date: '2025-12-03', close: 5674.63, change: '+0.12%', volume: '2.28亿手' }
-  ],
-  
-  // 技术指标
-  technicalIndicators: {
-    ma5: 5672.34,     // 5日均线
-    ma10: 5658.92,   // 10日均线
-    ma20: 5632.18,   // 20日均线
-    ma60: 5587.45,   // 60日均线
-    rsi: 58.3,       // RSI指标
-    macd: {
-      dif: 12.56,
-      dea: 8.92,
-      macd: 7.28
-    },
-    kdj: {
-      k: 68.5,
-      d: 62.3,
-      j: 80.9
+const openDB = (dbName, storeName, version = 1) => {
+    return new Promise((resolve, reject) => {
+        const request = indexedDB.open(dbName, version)
+
+        request.onerror = () => reject(request.error)
+        request.onsuccess = () => resolve(request.result)
+
+        request.onupgradeneeded = (event) => {
+            const db = event.target.result
+            if (!db.objectStoreNames.contains(storeName)) {
+                db.createObjectStore(storeName, { keyPath: 'id' })
+            }
+        }
+    })
+}
+
+
+
+/**
+ * 批量存储股票数据
+ * @param {Array} stockDataList - 股票数据数组
+ * @returns {Promise<boolean>} 存储是否成功
+ */
+const batchSaveStockData = async (stockDataList) => {
+    try {
+        const db = await openDB('StockDB', 'stocks')
+        const transaction = db.transaction(['stocks'], 'readwrite')
+        const store = transaction.objectStore('stocks')
+
+        const promises = stockDataList.map(data => {
+            return new Promise((resolve, reject) => {
+                const request = store.put(data)
+                request.onsuccess = () => resolve(request.result)
+                request.onerror = () => reject(request.error)
+            })
+        })
+
+        await Promise.all(promises)
+        return true
+    } catch (error) {
+        console.error('批量存储数据失败:', error)
+        throw error
     }
-  },
-  
-  // 成分股行业分布
-  sectorDistribution: [
-    { sector: '工业', weight: '28.5%', count: 285 },
-    { sector: '信息技术', weight: '22.3%', count: 223 },
-    { sector: '原材料', weight: '15.8%', count: 158 },
-    { sector: '可选消费', weight: '12.4%', count: 124 },
-    { sector: '医药卫生', weight: '8.7%', count: 87 },
-    { sector: '金融地产', weight: '6.2%', count: 62 },
-    { sector: '公用事业', weight: '3.8%', count: 38 },
-    { sector: '能源', weight: '2.3%', count: 23 }
-  ],
-  
-  // 市值分布
-  marketCapDistribution: {
-    largeCap: { range: '500亿以上', weight: '35.2%', count: 45 },
-    midCap: { range: '100-500亿', weight: '42.8%', count: 280 },
-    smallCap: { range: '50-100亿', weight: '15.3%', count: 420 },
-    microCap: { range: '50亿以下', weight: '6.7%', count: 255 }
-  },
-  
-  // 指数特点说明
-  characteristics: [
-    '中证1000指数由全部A股中剔除中证800指数样本股后规模偏小且流动性不足的股票组成',
-    '综合反映A股市场中中小市值公司的整体表现',
-    '成分股数量为1000只，覆盖沪深两市',
-    '每半年定期调整一次样本股，确保指数代表性',
-    '是中证指数体系中的重要宽基指数之一'
-  ]
-};
+}
+
+
 
 /**
- * 获取sz399997指数数据
- * @param {string} type 数据类型：basic/latest/historical/technical
- * @returns {Object} 对应的指数数据
+ * 获取股票数据，分三次获取5年数据
+ * 第一次：5年前1月1日 - 3年前12月31日（2年）
+ * 第二次：3年前1月1日 - 1年前12月31日（2年）
+ * 第三次：1年前1月1日 - 昨天（约1年）
+ * @param {Object} stockInfo - 股票信息对象
+ * @returns {Promise<Array>} 获取到的数据数组
  */
-export const getSz399997Data = (type = 'latest') => {
-  switch (type) {
-    case 'basic':
-      return {
-        ...SZ399997_INDEX.basicInfo,
-        code: SZ399997_INDEX.code,
-        name: SZ399997_INDEX.name,
-        fullName: SZ399997_INDEX.fullName
-      };
-    
-    case 'latest':
-      return SZ399997_INDEX.latestData;
-    
-    case 'historical':
-      return SZ399997_INDEX.historicalData;
-    
-    case 'technical':
-      return SZ399997_INDEX.technicalIndicators;
-    
-    case 'sector':
-      return SZ399997_INDEX.sectorDistribution;
-    
-    case 'marketcap':
-      return SZ399997_INDEX.marketCapDistribution;
-    
-    case 'characteristics':
-      return SZ399997_INDEX.characteristics;
-    
-    default:
-      return SZ399997_INDEX;
-  }
-};
+const fetchStockDataForYears = async (stockInfo) => {
+    const today = dayjs()
+    const yesterday = today.subtract(1, 'day')
+
+    // 计算5年前的年份作为起始年
+    const startYear = today.subtract(5, 'year').year()
+
+    // 计算三个时间段的年份
+    const firstYear = startYear           // 5年前的年份，如2020
+    const secondYear = startYear + 2       // 起始年+2，如2022
+    const thirdYear = startYear + 4        // 起始年+4，如2024
+
+    // 定义三个时间段的获取计划，按连续年份分配5年数据
+    const fetchRanges = [
+        {
+            start: `${firstYear}-01-01`,
+            end: `${firstYear + 1}-12-31`,
+            description: `${firstYear}年1月1日至${firstYear + 1}年12月31日`,
+        },
+        {
+            start: `${secondYear}-01-01`,
+            end: `${secondYear + 1}-12-31`,
+            description: `${secondYear}年1月1日至${secondYear + 1}年12月31日`,
+        },
+        {
+            start: `${thirdYear}-01-01`,
+            end: yesterday.format('YYYY-MM-DD'),
+            description: `${thirdYear}年1月1日至${yesterday.format('YYYY-MM-DD')}`,
+        },
+    ]
+
+    const allData = []
+
+    for (let i = 0; i < fetchRanges.length; i++) {
+        const range = fetchRanges[i]
+        try {
+            console.log(`获取${stockInfo.stock}第${i + 1}段数据: ${range.description}`)
+
+            const data = await getData(stockInfo, range.start, range.end)
+            allData.push({
+                ...data,
+                dateRange: range,
+                segment: i + 1,
+            })
+
+            // 添加延迟避免请求过于频繁
+            await new Promise(resolve => setTimeout(resolve, 200))
+
+        } catch (error) {
+            console.error(`获取${stockInfo.stock}第${i + 1}段数据失败:`, error)
+            // 继续处理下一段，不中断整个流程
+        }
+    }
+
+    return allData
+}
 
 /**
- * 获取sz399997实时行情
- * @returns {Promise<Object>} 通过API获取的实时数据
+ * 合并所有时间段的数据为一个完整的时间序列
+ * @param {Array} segmentData - 分段数据数组
+ * @returns {Object|null} 合并后的数据对象
  */
-export const getSz399997RealtimeData = async () => {
-  try {
-    // 这里可以调用真实的API接口获取数据
-    // const response = await StockApiService.getTencentStockData('sz399997');
-    // return response;
-    
-    // 模拟API调用延迟
-    await new Promise(resolve => setTimeout(resolve, 100));
-    
-    return SZ399997_INDEX.latestData;
-  } catch (error) {
-    console.error('获取sz399997实时数据失败:', error);
-    throw error;
-  }
-};
+const mergeSegmentData = (segmentData) => {
+    if (segmentData.length === 0) return null
+
+    const baseData = segmentData[0]
+
+    // 合并所有数据
+    let allDates = []
+    let allPrices = []
+    let allVolumes = []
+
+    // 收集所有数据
+    segmentData.forEach(segment => {
+        allDates.push(...segment.dateArr)
+        allPrices.push(...segment.priceArr)
+        allVolumes.push(...segment.volumnArr)
+    })
+
+    // 创建日期索引数组并按日期排序
+    const indexedData = allDates.map((date, index) => ({
+        date: date,
+        price: allPrices[index],
+        volume: allVolumes[index],
+        timestamp: dayjs(date).valueOf(),
+    }))
+
+    // 按时间戳排序
+    indexedData.sort((a, b) => a.timestamp - b.timestamp)
+
+    // 重新提取排序后的数据
+    const sortedDates = indexedData.map(item => item.date)
+    const sortedPrices = indexedData.map(item => item.price)
+    const sortedVolumes = indexedData.map(item => item.volume)
+
+    // 提取涉及的年份
+    const years = [...new Set(sortedDates.map(date => dayjs(date).year()))].sort()
+
+    const mergedData = {
+        id: baseData.id,
+        plate: baseData.plate,
+        stock: baseData.stock,
+        fund: baseData.fund,
+        dateArr: sortedDates,
+        priceArr: sortedPrices,
+        volumnArr: sortedVolumes,
+        years: years,
+        dateRange: {
+            start: sortedDates[0],
+            end: sortedDates[sortedDates.length - 1],
+        },
+        totalDays: sortedDates.length,
+    }
+
+    return mergedData
+}
+
+// ==================== 私有辅助方法 ====================
 
 /**
- * 格式化sz399997数据用于显示
- * @param {Object} data 原始数据
- * @param {string} format 格式类型：table/chart/json
- * @returns {Object} 格式化后的数据
+ * 获取localStorage中的缓存日期标志
+ * @returns {string|null} 缓存的日期字符串或null
  */
-export const formatSz399997Data = (data, format = 'json') => {
-  switch (format) {
-    case 'table':
-      return {
-        columns: ['指标', '数值'],
-        rows: [
-          ['指数名称', data.name || SZ399997_INDEX.name],
-          ['指数代码', data.code || SZ399997_INDEX.code],
-          ['最新点位', data.currentPrice || SZ399997_INDEX.latestData.currentPrice],
-          ['涨跌额', data.change || SZ399997_INDEX.latestData.change],
-          ['涨跌幅', data.changePercent || SZ399997_INDEX.latestData.changePercent],
-          ['开盘价', data.openPrice || SZ399997_INDEX.latestData.openPrice],
-          ['最高价', data.highPrice || SZ399997_INDEX.latestData.highPrice],
-          ['最低价', data.lowPrice || SZ399997_INDEX.latestData.lowPrice],
-          ['成交量', data.volume || SZ399997_INDEX.latestData.volume],
-          ['成交额', data.amount || SZ399997_INDEX.latestData.amount]
-        ]
-      };
-    
-    case 'chart':
-      return {
-        labels: SZ399997_INDEX.historicalData.map(item => item.date),
-        datasets: [{
-          label: SZ399997_INDEX.name,
-          data: SZ399997_INDEX.historicalData.map(item => item.close),
-          borderColor: '#409eff',
-          backgroundColor: 'rgba(64, 158, 255, 0.1)',
-          fill: true
-        }]
-      };
-    
-    default:
-      return data;
-  }
-};
+const getCacheDate = () => {
+    try {
+        return localStorage.getItem('stockData_cacheDate')
+    } catch (error) {
+        console.warn('读取localStorage缓存日期失败:', error)
+        return null
+    }
+}
 
-// 默认导出
-export default {
-  SZ399997_INDEX,
-  getSz399997Data,
-  getSz399997RealtimeData,
-  formatSz399997Data
-};
+/**
+ * 设置localStorage中的缓存日期标志
+ * @param {string} date - 日期字符串
+ * @returns {boolean} 是否设置成功
+ */
+const setCacheDate = (date) => {
+    try {
+        localStorage.setItem('stockData_cacheDate', date)
+        return true
+    } catch (error) {
+        console.warn('设置localStorage缓存日期失败:', error)
+        return false
+    }
+}
+
+/**
+ * 检查是否需要刷新数据
+ * @returns {boolean} 是否需要刷新
+ */
+const shouldRefreshData = () => {
+    const cachedDate = getCacheDate()
+    const today = dayjs().format('YYYY-MM-DD')
+
+    // 如果没有缓存日期或日期不匹配，则需要刷新
+    return !cachedDate || cachedDate !== today
+}
+
+/**
+ * 获取所有已存储的股票数据
+ * @returns {Promise<Array>} 所有股票数据数组
+ */
+const getAllStockData = async () => {
+    try {
+        const db = await openDB('StockDB', 'stocks')
+        const transaction = db.transaction(['stocks'], 'readonly')
+        const store = transaction.objectStore('stocks')
+
+        const request = store.getAll()
+
+        return new Promise((resolve, reject) => {
+            request.onsuccess = () => resolve(request.result)
+            request.onerror = () => reject(request.error)
+        })
+    } catch (error) {
+        console.error('获取所有数据失败:', error)
+        throw error
+    }
+}
+
+/**
+ * 处理股票数据并存储到indexDB
+ * @returns {Promise<Object>} 处理结果对象
+ */
+const processAndStoreStockData = async () => {
+    try {
+        console.log('开始处理股票数据...')
+
+        const today = dayjs()
+        const fiveYearsAgo = today.subtract(5, 'year')
+        const yesterday = today.subtract(1, 'day')
+
+        console.log(`数据获取范围: ${fiveYearsAgo.format('YYYY-MM-DD')} 至 ${yesterday.format('YYYY-MM-DD')}`)
+
+        const processedStocks = []
+
+        // 遍历所有股票
+        for (const stockInfo of stocks) {
+            try {
+                console.log(`正在处理: ${stockInfo.stock} (${stockInfo.id})`)
+
+                // 分三次获取5年数据
+                const segmentData = await fetchStockDataForYears(stockInfo)
+
+                // 合并所有时间段的数据
+                const mergedData = mergeSegmentData(segmentData)
+
+                if (mergedData && mergedData.dateArr.length > 0) {
+                    processedStocks.push(mergedData)
+                    console.log(`${stockInfo.stock} 数据处理完成，共${mergedData.dateArr.length}条记录，时间范围: ${mergedData.dateRange.start} 至 ${mergedData.dateRange.end}`)
+                } else {
+                    console.warn(`${stockInfo.stock} 未能获取到有效数据`)
+                }
+
+            } catch (error) {
+                console.error(`处理${stockInfo.stock}时发生错误:`, error)
+                // 继续处理下一只股票
+            }
+        }
+
+        // 批量存储到indexDB
+        if (processedStocks.length > 0) {
+            await batchSaveStockData(processedStocks)
+            console.log(`成功存储${processedStocks.length}只股票数据到indexDB`)
+            return {
+                success: true,
+                count: processedStocks.length,
+                message: '数据处理并存储完成',
+            }
+        } else {
+            return {
+                success: false,
+                message: '未能获取到任何有效数据',
+            }
+        }
+
+    } catch (error) {
+        console.error('处理股票数据时发生严重错误:', error)
+        return {
+            success: false,
+            error: error.message,
+            message: '数据处理失败',
+        }
+    }
+}
+
+// ==================== 公共导出方法 ====================
+
+/**
+ * 获取所有股票历史数据
+ * 实现每日缓存机制：当日首次调用获取最新数据，后续调用直接从indexDB返回
+ * @returns {Promise<Array>} 所有股票历史数据数组
+ */
+export const getStockHistoricalData = async () => {
+    try {
+        // 检查是否需要刷新数据
+        const needRefresh = shouldRefreshData()
+
+        if (!needRefresh) {
+            // 不需要刷新，直接从indexDB获取数据
+            const existingData = await getAllStockData()
+            if (existingData && existingData.length > 0) {
+                console.log(`从indexDB获取到 ${existingData.length} 只股票的缓存数据`)
+                return existingData
+            }
+        }
+
+        // 需要刷新或没有数据，重新获取数据
+        console.log(needRefresh ? '检测到新日期，开始刷新股票数据...' : '数据库中暂无数据，开始获取并存储...')
+
+        // 获取并存储最新数据
+        const result = await processAndStoreStockData()
+
+        if (result.success) {
+            // 获取最新数据
+            const newData = await getAllStockData()
+
+            if (newData && newData.length > 0) {
+                // 更新缓存日期标志
+                const today = dayjs().format('YYYY-MM-DD')
+                const cacheDateSet = setCacheDate(today)
+
+                if (cacheDateSet) {
+                    console.log(`成功更新缓存日期：${today}，共 ${newData.length} 只股票数据`)
+                } else {
+                    console.warn('缓存日期更新失败，但数据已成功获取')
+                }
+
+                console.log(`成功获取并存储了 ${newData.length} 只股票的最新数据`)
+                return newData
+            } else {
+                throw new Error('数据获取成功但结果为空')
+            }
+        } else {
+            throw new Error(result.message || '数据获取失败')
+        }
+
+    } catch (error) {
+        console.error('获取股票历史数据失败:', error)
+        throw error
+    }
+}
