@@ -5,10 +5,40 @@ export default [{
     'fund': '富国中证煤炭指数C',
 },
 {
+    'plate': '资源',
+    'stock': '稀土ETF',
+    'id': 'SH516150',
+    'fund': '嘉实中证稀土产业ETF联接C',
+},
+{
     'plate': '有色',
     'stock': '有色龙头ETF',
     'id': 'SZ159876',
     'fund': '财通资管中证有色金属指数C',
+},
+{
+    'plate': '环保',
+    'stock': '中证环保',
+    'id': 'SH000827',
+    'fund': '广发中证环保ETF联接C',
+},
+{
+    'plate': '基建',
+    'stock': '基建ETF',
+    'id': 'SH516950',
+    'fund': '华安中证基建指数C',
+},
+{
+    'plate': '农林牧渔',
+    'stock': '畜牧养殖ETF',
+    'id': 'SH516670',
+    'fund': '招商中证畜牧养殖ETF联接C',
+},
+{
+    'plate': '钢铁',
+    'stock': '钢铁ETF',
+    'id': 'SH515210',
+    'fund': '财通资管中证钢铁指数C',
 },
 {
     'plate': '农业',
@@ -17,10 +47,28 @@ export default [{
     'fund': '天弘中证农业主题指数C',
 },
 {
+    'plate': '汽车',
+    'stock': '智能汽车ETF',
+    'id': 'SH515250',
+    'fund': '天弘中证智能汽车指数C',
+},
+{
+    'plate': '化工',
+    'stock': '细分化工',
+    'id': 'SH000813',
+    'fund': '天弘中证细分化工产业主题指数C',
+},
+{
     'plate': '国防军工',
     'stock': '中证军工',
     'id': 'SZ399967',
     'fund': '广发中证军工ETF联接C',
+},
+{
+    'plate': '建筑',
+    'stock': '建材ETF',
+    'id': 'SZ159745',
+    'fund': '天弘国证建筑材料指数C',
 },
 {
     'plate': '地产',
@@ -47,16 +95,64 @@ export default [{
     'fund': '华宝中证细分食品饮料ETF联接C',
 },
 {
+    'plate': '消费',
+    'stock': '中证消费',
+    'id': 'SH000932',
+    'fund': '嘉实中证主要消费ETF联接C',
+},
+{
+    'plate': '通信',
+    'stock': '5GETF',
+    'id': 'SZ159994',
+    'fund': '银华中证5G通信主题ETF联接C',
+},
+{
     'plate': '半导体',
     'stock': '芯片ETF',
     'id': 'SH516920',
     'fund': '天弘中证芯片产业指数C',
 },
 {
+    'plate': '娱乐',
+    'stock': '游戏ETF',
+    'id': 'SZ159869',
+    'fund': '国泰中证动漫游戏ETF联接C',
+},
+{
     'plate': '传媒',
     'stock': '中证传媒',
     'id': 'SZ399971',
     'fund': '鹏华中证传媒指数C',
+},
+{
+    'plate': '体育',
+    'stock': '中证体育',
+    'id': 'SZ399804',
+    'fund': '富国中证体育产业指数C',
+},
+{
+    'plate': '高新科技',
+    'stock': '科技龙头ETF',
+    'id': 'SH516050',
+    'fund': '华宝科技ETF联接C',
+},
+{
+    'plate': '信息技术',
+    'stock': '全指信息',
+    'id': 'SH000993',
+    'fund': '广发信息技术联接C',
+},
+{
+    'plate': '电子',
+    'stock': '电子ETF',
+    'id': 'SZ159997',
+    'fund': '天弘中证电子ETF联接C',
+},
+{
+    'plate': '计算机',
+    'stock': '计算机ETF',
+    'id': 'SZ159998',
+    'fund': '天弘中证计算机ETF联接C',
 },
 {
     'plate': '医药',
@@ -69,6 +165,18 @@ export default [{
     'stock': '恒生科技30ETF',
     'id': 'SH513010',
     'fund': '华安恒生科技指数C',
+},
+{
+    'plate': '光伏',
+    'stock': '光伏ETF',
+    'id': 'SZ159857',
+    'fund': '天弘中证光伏产业指数C',
+},
+{
+    'plate': '电池',
+    'stock': '电池ETF',
+    'id': 'SH562880',
+    'fund': '汇添富中证电池主题ETF联接C',
 },
 {
     'plate': '新能源',
@@ -87,6 +195,18 @@ export default [{
     'stock': '人工智能ETF',
     'id': 'SZ159819',
     'fund': '易方达中证人工智能主题ETF联接C',
+},
+{
+    'plate': '生物科技',
+    'stock': 'CSWD生科',
+    'id': 'SZ399993',
+    'fund': '易方达中证万得生物科技指数C',
+},
+{
+    'plate': '科创板',
+    'stock': '科创50',
+    'id': 'SH000688',
+    'fund': '易方达科创板50ETF联接C',
 },
 {
     'plate': '创业板50',
