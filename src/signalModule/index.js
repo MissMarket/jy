@@ -181,7 +181,7 @@ const calculateBatchJMA = (state, prices) => {
  * @param {number} power - 功率（默认1）
  * @returns {Array} JMA值数组
  */
-const calculateJMA = (prices, period = 10, phase = 0, power = 1) => {
+const calculateJMA = (prices, period = 10, phase = 0, power = 1.5) => {
   if (!Array.isArray(prices) || prices.length === 0) {
     return []
   }

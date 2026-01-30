@@ -1,6 +1,7 @@
 <script setup>
   import { getStockHistoricalData } from '@/dataModule'
   import { ref, onMounted } from 'vue'
+  import { Histogram } from '@element-plus/icons-vue'
   import calculateJMA from '@/signalModule'
 
   defineProps({
@@ -237,173 +238,173 @@
 </script>
 <template>
   <div class="backtest-container">
-    <h2>交易策略回测系统</h2>
-    <div v-if="loading">加载中...</div>
-    <div v-else>
-      <h3>选择股票</h3>
-      <div class="stock-selector">
-        <label v-for="(stock, index) in res" :key="index" class="stock-option">
-          <input
-            v-model="selectedStockIndex"
-            type="radio"
-            :value="index"
-            @change="handleStockChange(index)"
+    <Card shadow="never">
+      <template #header>
+        <div class="page-header">
+          <Icon class="header-icon">
+            <Histogram />
+          </Icon>
+          <span class="header-title">交易策略回测系统</span>
+        </div>
+      </template>
+
+      <Card v-if="loading" style="margin-top: 20px">
+        <Skeleton :rows="5" animated />
+      </Card>
+
+      <Space v-else direction="vertical" style="width: 100%" :size="20">
+        <Card>
+          <template #header>
+            <div class="card-header">
+              <span>选择股票</span>
+            </div>
+          </template>
+          <RadioGroup v-model="selectedStockIndex" @change="handleStockChange">
+            <RadioButton v-for="(stock, index) in res" :key="index" :label="index">
+              {{ stock.plate || `股票 ${index + 1}` }}
+            </RadioButton>
+          </RadioGroup>
+        </Card>
+
+        <Card>
+          <template #header>
+            <div class="card-header">
+              <span>策略对比 - {{ dataObj.plate }}</span>
+            </div>
+          </template>
+          <Alert
+            :title="backtestResult.comparison?.comparison"
+            :type="backtestResult.comparison?.winner === '交易策略' ? 'success' : 'warning'"
+            :closable="false"
+            show-icon
           />
-          {{ stock.plate || `股票 ${index + 1}` }}
-        </label>
-      </div>
+        </Card>
 
-      <h3>策略对比</h3>
-      <h3>{{ dataObj.plate }}</h3>
-      <p>{{ backtestResult.comparison?.comparison }}</p>
+        <Row :gutter="20">
+          <ElCol :span="12">
+            <Card>
+              <template #header>
+                <div class="card-header">
+                  <span>交易策略（JMA信号）</span>
+                </div>
+              </template>
+              <Descriptions :column="1" border>
+                <DescriptionsItem label="初始资金">
+                  ¥{{ Number(backtestResult.strategy?.initialCapital).toLocaleString() }}
+                </DescriptionsItem>
+                <DescriptionsItem label="最终资金">
+                  ¥{{ Number(backtestResult.strategy?.finalCapital).toLocaleString() }}
+                </DescriptionsItem>
+                <DescriptionsItem label="收益率">
+                  <Tag
+                    :type="
+                      parseFloat(backtestResult.strategy?.returnRate) > 0 ? 'success' : 'danger'
+                    "
+                  >
+                    {{ backtestResult.strategy?.returnRate }}%
+                  </Tag>
+                </DescriptionsItem>
+                <DescriptionsItem label="总交易次数">
+                  {{ backtestResult.strategy?.totalTrades }}
+                </DescriptionsItem>
+              </Descriptions>
 
-      <div class="strategy-section">
-        <h3>交易策略（JMA信号）</h3>
-        <p>初始资金: ¥{{ Number(backtestResult.strategy?.initialCapital).toLocaleString() }}</p>
-        <p>最终资金: ¥{{ Number(backtestResult.strategy?.finalCapital).toLocaleString() }}</p>
-        <p>收益率: {{ backtestResult.strategy?.returnRate }}%</p>
-        <p>总交易次数: {{ backtestResult.strategy?.totalTrades }}</p>
+              <Divider content-position="left"> 交易明细 </Divider>
+              <ElTable
+                :data="backtestResult.strategy?.trades || []"
+                border
+                stripe
+                max-height="400"
+                style="width: 100%"
+              >
+                <TableColumn prop="type" label="操作" width="100" />
+                <TableColumn prop="day" label="交易日" width="100" />
+                <TableColumn prop="price" label="价格" width="100" />
+                <TableColumn prop="shares" label="股数" width="100" />
+                <TableColumn label="金额" width="120">
+                  <template #default="{ row }">
+                    {{ row.cost || row.proceeds || '-' }}
+                  </template>
+                </TableColumn>
+                <TableColumn prop="cash" label="现金" width="120" />
+                <TableColumn prop="position" label="持仓" width="100" />
+                <TableColumn prop="signal" label="信号" />
+              </ElTable>
+            </Card>
+          </ElCol>
 
-        <h4>交易明细</h4>
-        <table>
-          <thead>
-            <tr>
-              <th>操作</th>
-              <th>交易日</th>
-              <th>价格</th>
-              <th>股数</th>
-              <th>金额</th>
-              <th>现金</th>
-              <th>持仓</th>
-              <th>信号</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr v-for="(trade, index) in backtestResult.strategy?.trades" :key="index">
-              <td>{{ trade.type }}</td>
-              <td>{{ trade.day }}</td>
-              <td>{{ trade.price }}</td>
-              <td>{{ trade.shares }}</td>
-              <td>{{ trade.cost || trade.proceeds || '-' }}</td>
-              <td>{{ trade.cash }}</td>
-              <td>{{ trade.position }}</td>
-              <td>{{ trade.signal }}</td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
-
-      <div class="strategy-section">
-        <h3>买入并持有策略</h3>
-        <p>初始资金: ¥{{ Number(backtestResult.hold?.initialCapital).toLocaleString() }}</p>
-        <p>
-          买入日: 第{{ backtestResult.hold?.buyDay }}天，价格 ¥{{ backtestResult.hold?.buyPrice }}
-        </p>
-        <p>
-          卖出日: 第{{ backtestResult.hold?.sellDay }}天，价格 ¥{{ backtestResult.hold?.sellPrice }}
-        </p>
-        <p>买入股数: {{ backtestResult.hold?.shares }}</p>
-        <p>买入成本: ¥{{ Number(backtestResult.hold?.cost).toLocaleString() }}</p>
-        <p>卖出收入: ¥{{ Number(backtestResult.hold?.proceeds).toLocaleString() }}</p>
-        <p>最终资金: ¥{{ Number(backtestResult.hold?.finalCapital).toLocaleString() }}</p>
-        <p>收益率: {{ backtestResult.hold?.returnRate }}%</p>
-      </div>
-    </div>
+          <ElCol :span="12">
+            <Card>
+              <template #header>
+                <div class="card-header">
+                  <span>买入并持有策略</span>
+                </div>
+              </template>
+              <Descriptions :column="1" border>
+                <DescriptionsItem label="初始资金">
+                  ¥{{ Number(backtestResult.hold?.initialCapital).toLocaleString() }}
+                </DescriptionsItem>
+                <DescriptionsItem label="买入日">
+                  第{{ backtestResult.hold?.buyDay }}天，价格 ¥{{ backtestResult.hold?.buyPrice }}
+                </DescriptionsItem>
+                <DescriptionsItem label="卖出日">
+                  第{{ backtestResult.hold?.sellDay }}天，价格 ¥{{ backtestResult.hold?.sellPrice }}
+                </DescriptionsItem>
+                <DescriptionsItem label="买入股数">
+                  {{ backtestResult.hold?.shares }}
+                </DescriptionsItem>
+                <DescriptionsItem label="买入成本">
+                  ¥{{ Number(backtestResult.hold?.cost).toLocaleString() }}
+                </DescriptionsItem>
+                <DescriptionsItem label="卖出收入">
+                  ¥{{ Number(backtestResult.hold?.proceeds).toLocaleString() }}
+                </DescriptionsItem>
+                <DescriptionsItem label="最终资金">
+                  ¥{{ Number(backtestResult.hold?.finalCapital).toLocaleString() }}
+                </DescriptionsItem>
+                <DescriptionsItem label="收益率">
+                  <Tag
+                    :type="parseFloat(backtestResult.hold?.returnRate) > 0 ? 'success' : 'danger'"
+                  >
+                    {{ backtestResult.hold?.returnRate }}%
+                  </Tag>
+                </DescriptionsItem>
+              </Descriptions>
+            </Card>
+          </ElCol>
+        </Row>
+      </Space>
+    </Card>
   </div>
 </template>
 
 <style scoped>
   .backtest-container {
-    padding: 20px;
-    max-width: 1200px;
+    max-width: 1400px;
     margin: 0 auto;
   }
 
-  h2 {
-    color: #333;
-    border-bottom: 2px solid #1890ff;
-    padding-bottom: 10px;
-  }
-
-  h3 {
-    color: #1890ff;
-    margin-top: 30px;
-    margin-bottom: 15px;
-  }
-
-  h4 {
-    color: #666;
-    margin-top: 20px;
-    margin-bottom: 10px;
-  }
-
-  .strategy-section {
-    background: #f5f5f5;
-    padding: 15px;
-    border-radius: 8px;
-    margin-top: 20px;
-  }
-
-  .stock-selector {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 15px;
-    padding: 15px;
-    background: #f9f9f9;
-    border-radius: 8px;
-    margin-bottom: 20px;
-  }
-
-  .stock-option {
+  .page-header {
     display: flex;
     align-items: center;
     gap: 8px;
-    padding: 8px 15px;
-    background: white;
-    border-radius: 4px;
-    cursor: pointer;
-    transition: all 0.3s;
-    border: 1px solid #ddd;
+    font-size: 18px;
+    font-weight: 500;
+    color: #1890ff;
   }
 
-  .stock-option:hover {
-    background: #e6f7ff;
-    border-color: #1890ff;
+  .header-icon {
+    font-size: 20px;
   }
 
-  .stock-option input[type='radio'] {
-    cursor: pointer;
+  .header-title {
+    font-weight: 600;
   }
 
-  p {
-    margin: 8px 0;
-    font-size: 14px;
-  }
-
-  table {
-    width: 100%;
-    border-collapse: collapse;
-    margin-top: 10px;
-    font-size: 13px;
-  }
-
-  thead {
-    background: #1890ff;
-    color: white;
-  }
-
-  th,
-  td {
-    border: 1px solid #ddd;
-    padding: 8px;
-    text-align: center;
-  }
-
-  tbody tr:nth-child(even) {
-    background: #f9f9f9;
-  }
-
-  tbody tr:hover {
-    background: #e6f7ff;
+  .card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-weight: bold;
   }
 </style>
