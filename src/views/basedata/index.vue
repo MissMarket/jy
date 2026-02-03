@@ -22,9 +22,9 @@
     } else if (a < b && c < b) {
       return { signal: '卖出', color: '#00ff00' }
     } else if (a < b && b < c) {
-      return { signal: '空仓', color: '#0000ff' }
-    } else if (a > b && b > c) {
       return { signal: '持有', color: '#ffa500' }
+    } else if (a > b && b > c) {
+      return { signal: '空仓', color: '#0000ff' }
     } else {
       return { signal: '观望', color: '#999999' }
     }
@@ -66,6 +66,7 @@
         date,
         price: stockData.priceArr?.[originalIndex] || 0,
         volumn: stockData.volumnArr?.[originalIndex] || 0,
+        jma: jmaArr[jmaIndex] || 0,
         signal: signal.signal,
         signalColor: signal.color,
       }
@@ -140,6 +141,11 @@
               <span :style="{ color: row.signalColor, fontWeight: 'bold' }">
                 {{ row.signal }}
               </span>
+            </template>
+          </TableColumn>
+          <TableColumn prop="jma" label="JMA" width="120">
+            <template #default="{ row }">
+              {{ row.jma.toFixed(2) }}
             </template>
           </TableColumn>
           <TableColumn prop="price" label="收盘价" width="120">

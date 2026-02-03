@@ -60,12 +60,14 @@
   }
 
   /**
-   * 根据原始值进行排名评分（1-20分，20分最好）
+   * 根据原始值进行排名评分
    * @param {Array} values - 所有指数在该维度的原始值数组
+   * @param {number} maxScore - 最高分数
+   * @param {number} interval - 评分间隔
    * @param {boolean} isHigherBetter - 值越大越好（true）或越小越好（false）
    * @returns {Array} 排名评分数组
    */
-  const rankAndScore = (values, isHigherBetter = true) => {
+  const rankAndScore = (values, maxScore, interval, isHigherBetter = true) => {
     // 创建索引-值对数组
     const indexed = values.map((value, index) => ({ value, index }))
 
@@ -79,9 +81,10 @@
     // 创建评分数组
     const scores = new Array(values.length).fill(0)
 
-    // 按排名分配分数（第1名20分，第2名19分...第20名1分）
+    // 按排名分配分数
     indexed.forEach((item, rank) => {
-      scores[item.index] = 20 - rank
+      const score = maxScore - rank * interval
+      scores[item.index] = Math.max(0, score)
     })
 
     return scores
@@ -100,9 +103,9 @@
     } else if (a < b && c < b) {
       return { signal: '卖出', color: '#00ff00' }
     } else if (a < b && b < c) {
-      return { signal: '空仓', color: '#0000ff' }
-    } else if (a > b && b > c) {
       return { signal: '持有', color: '#ffa500' }
+    } else if (a > b && b > c) {
+      return { signal: '空仓', color: '#0000ff' }
     } else {
       return { signal: '观望', color: '#999999' }
     }
@@ -226,103 +229,37 @@
       }
     })
 
-    // 第二步：对每个维度进行排名评分（1-20分）
+    // 第二步：只计算3个维度的评分
     const dim1Scores = rankAndScore(
       stockRawValues.map(v => v.dim1_trendStrength),
+      30,
+      1.5,
       true,
-    ) // 趋势强度：越大越好
+    ) // 趋势强度：30分，间隔1.5，越大越好
     const dim2Scores = rankAndScore(
       stockRawValues.map(v => v.dim2_downwardTrend),
+      30,
+      1.5,
       true,
-    ) // 下跌倾向：越大越好（下跌天数占比）
-    const dim3Scores = rankAndScore(
-      stockRawValues.map(v => v.dim3_stability),
-      false,
-    ) // 价格稳定：越小越好
-    const dim4Scores = rankAndScore(
-      stockRawValues.map(v => v.dim4_consistency),
-      true,
-    ) // 趋势一致：越大越好
-    const dim5Scores = rankAndScore(
-      stockRawValues.map(v => v.dim5_deviation),
-      true,
-    ) // 偏差幅度：越大越好
-    const dim6Scores = rankAndScore(
-      stockRawValues.map(v => v.dim6_maDeviation),
-      false,
-    ) // 均线乖离：越小越好
+    ) // 下跌倾向：30分，间隔1.5，越大越好（下跌天数占比）
     const dim7Scores = rankAndScore(
       stockRawValues.map(v => v.dim7_priceVolatility),
+      40,
+      2,
       true,
-    ) // 价格波动：越大越好
-    const dim8Scores = rankAndScore(
-      stockRawValues.map(v => v.dim8_amplitude),
-      true,
-    ) // 波动幅度：越大越好
-    const dim9Scores = rankAndScore(
-      stockRawValues.map(v => v.dim9_volumeVolatility),
-      true,
-    ) // 成交量波动：越大越好
-    const dim10Scores = rankAndScore(
-      stockRawValues.map(v => v.dim10_oscillation),
-      false,
-    ) // 震荡频率：越小越好
+    ) // 价格波动：40分，间隔2，越大越好
 
-    // 第三步：计算加权总分
-    // 权重配置：趋势强度(3x)、波动性得分(2x)、下跌倾向(3x)，其他维度(1x)
+    // 第三步：计算总分（只包含3个维度）
     const results = stockRawValues.map((stock, index) => {
-      // 各维度得分
-      const trendScores = [
-        dim1Scores[index],
-        dim2Scores[index],
-        dim3Scores[index],
-        dim4Scores[index],
-        dim5Scores[index],
-        dim6Scores[index],
-      ]
-      const volatilityScores = [
-        dim7Scores[index],
-        dim8Scores[index],
-        dim9Scores[index],
-        dim10Scores[index],
-      ]
-
-      // 加权计算总分
-      // 趋势强度（维度1）权重3
-      // 下跌倾向（维度2）权重3
-      // 波动性得分：价格波动（维度7）权重2
-      // 其他维度权重各为1
-      const weightedScore =
-        dim1Scores[index] * 3 + // 趋势强度 3倍权重
-        dim2Scores[index] * 3 + // 下跌倾向 3倍权重
-        dim3Scores[index] * 1 + // 价格稳定性
-        dim4Scores[index] * 1 + // 趋势一致性
-        dim5Scores[index] * 1 + // 偏差幅度
-        dim6Scores[index] * 1 + // 均线乖离率
-        dim7Scores[index] * 2 + // 价格波动率 2倍权重
-        dim8Scores[index] * 1 + // 波动幅度
-        dim9Scores[index] * 1 + // 成交量波动性
-        dim10Scores[index] * 1 // 震荡频率
+      const totalScore = dim1Scores[index] + dim2Scores[index] + dim7Scores[index]
 
       return {
         name: stock.name,
         date: stock.date,
         tradingSignal: stock.tradingSignal, // 交易信号
-        totalScore: weightedScore,
-        trendScores,
-        volatilityScores,
-        // 单独计算趋势和波动性的平均分（用于显示）
-        trendTotal:
-          (dim1Scores[index] * 3 +
-            dim2Scores[index] * 3 +
-            dim3Scores[index] +
-            dim4Scores[index] +
-            dim5Scores[index] +
-            dim6Scores[index]) /
-          (3 + 3 + 1 + 1 + 1 + 1),
-        volatilityTotal:
-          (dim7Scores[index] * 2 + dim8Scores[index] + dim9Scores[index] + dim10Scores[index]) /
-          (2 + 1 + 1 + 1),
+        totalScore,
+        trendScores: [dim1Scores[index], dim2Scores[index]],
+        volatilityScores: [dim7Scores[index]],
       }
     })
 
@@ -409,68 +346,32 @@
                 </span>
               </template>
             </ElTableColumn>
-            <ElTableColumn prop="totalScore" label="总分" width="100" sortable>
+            <ElTableColumn prop="totalScore" label="总分" width="100">
               <template #default="{ row }">
-                <el-tag :type="row.totalScore >= 100 ? 'success' : 'warning'">
-                  {{ row.totalScore }}
+                <el-tag :type="row.totalScore >= 80 ? 'success' : 'warning'">
+                  {{ row.totalScore.toFixed(1) }}
                 </el-tag>
               </template>
             </ElTableColumn>
             <ElTableColumn label="趋势强度★" width="90">
               <template #default="{ row }">
                 <el-tag type="danger">
-                  {{ row.trendScores[0] }}
+                  {{ row.trendScores[0].toFixed(1) }}
                 </el-tag>
               </template>
             </ElTableColumn>
             <ElTableColumn label="下跌倾向★" width="90">
               <template #default="{ row }">
                 <el-tag type="danger">
-                  {{ row.trendScores[1] }}
+                  {{ row.trendScores[1].toFixed(1) }}
                 </el-tag>
               </template>
             </ElTableColumn>
             <ElTableColumn label="价格波动★" width="90">
               <template #default="{ row }">
                 <el-tag type="warning">
-                  {{ row.volatilityScores[0] }}
+                  {{ row.volatilityScores[0].toFixed(1) }}
                 </el-tag>
-              </template>
-            </ElTableColumn>
-            <ElTableColumn label="价格稳定" width="90">
-              <template #default="{ row }">
-                {{ row.trendScores[2] }}
-              </template>
-            </ElTableColumn>
-            <ElTableColumn label="趋势一致" width="90">
-              <template #default="{ row }">
-                {{ row.trendScores[3] }}
-              </template>
-            </ElTableColumn>
-            <ElTableColumn label="偏差幅度" width="90">
-              <template #default="{ row }">
-                {{ row.trendScores[4] }}
-              </template>
-            </ElTableColumn>
-            <ElTableColumn label="均线乖离" width="90">
-              <template #default="{ row }">
-                {{ row.trendScores[5] }}
-              </template>
-            </ElTableColumn>
-
-            <ElTableColumn label="波动幅度" width="90">
-              <template #default="{ row }">
-                {{ row.volatilityScores[1] }}
-              </template>
-            </ElTableColumn>
-            <ElTableColumn label="成交量波动" width="100">
-              <template #default="{ row }">
-                {{ row.volatilityScores[2] }}
-              </template>
-            </ElTableColumn>
-            <ElTableColumn label="震荡频率" width="90">
-              <template #default="{ row }">
-                {{ row.volatilityScores[3] }}
               </template>
             </ElTableColumn>
           </ElTable>
