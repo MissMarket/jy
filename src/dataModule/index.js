@@ -28,6 +28,30 @@ const openDB = (dbName, storeName, version = 1) => {
 }
 
 /**
+ * 清空数据库中的所有数据
+ * @returns {Promise<boolean>} 清空是否成功
+ */
+const clearAllStockData = async () => {
+  try {
+    const db = await openDB('StockDB', 'stocks')
+    const transaction = db.transaction(['stocks'], 'readwrite')
+    const store = transaction.objectStore('stocks')
+
+    return new Promise((resolve, reject) => {
+      const request = store.clear()
+      request.onsuccess = () => {
+        console.log('数据库已清空')
+        resolve(true)
+      }
+      request.onerror = () => reject(request.error)
+    })
+  } catch (error) {
+    console.error('清空数据库失败:', error)
+    throw error
+  }
+}
+
+/**
  * 批量存储股票数据
  * @param {Array} stockDataList - 股票数据数组
  * @returns {Promise<boolean>} 存储是否成功
@@ -233,6 +257,36 @@ const getAllStockData = async () => {
 }
 
 /**
+ * 处理单只股票数据获取
+ * @param {Object} stockInfo - 股票信息对象
+ * @returns {Promise<Object|null>} 处理后的股票数据或null
+ */
+const processSingleStock = async stockInfo => {
+  try {
+    console.log(`正在处理: ${stockInfo.stock} (${stockInfo.id})`)
+
+    // 获取近500日数据
+    const segmentData = await fetchStockDataForYears(stockInfo)
+
+    // 合并所有时间段的数据
+    const mergedData = mergeSegmentData(segmentData)
+
+    if (mergedData && mergedData.dateArr.length > 0) {
+      console.log(
+        `${stockInfo.stock} 数据处理完成，共${mergedData.dateArr.length}条记录，时间范围: ${mergedData.dateRange.start} 至 ${mergedData.dateRange.end}`,
+      )
+      return mergedData
+    } else {
+      console.warn(`${stockInfo.stock} 未能获取到有效数据`)
+      return null
+    }
+  } catch (error) {
+    console.error(`处理${stockInfo.stock}时发生错误:`, error)
+    return null
+  }
+}
+
+/**
  * 处理股票数据并存储到indexDB
  * @returns {Promise<Object>} 处理结果对象
  */
@@ -248,35 +302,20 @@ const processAndStoreStockData = async () => {
       `数据获取范围: ${startDate.format('YYYY-MM-DD')} 至 ${yesterday.format('YYYY-MM-DD')} (近500日)`,
     )
 
-    const processedStocks = []
+    // 使用 Promise.all 并行获取所有股票数据
+    const stockPromises = stocks.map(stockInfo => processSingleStock(stockInfo))
+    const results = await Promise.all(stockPromises)
 
-    // 遍历所有股票
-    for (const stockInfo of stocks) {
-      try {
-        console.log(`正在处理: ${stockInfo.stock} (${stockInfo.id})`)
+    // 过滤掉获取失败的股票
+    const processedStocks = results.filter(data => data !== null)
 
-        // 获取近500日数据
-        const segmentData = await fetchStockDataForYears(stockInfo)
-
-        // 合并所有时间段的数据
-        const mergedData = mergeSegmentData(segmentData)
-
-        if (mergedData && mergedData.dateArr.length > 0) {
-          processedStocks.push(mergedData)
-          console.log(
-            `${stockInfo.stock} 数据处理完成，共${mergedData.dateArr.length}条记录，时间范围: ${mergedData.dateRange.start} 至 ${mergedData.dateRange.end}`,
-          )
-        } else {
-          console.warn(`${stockInfo.stock} 未能获取到有效数据`)
-        }
-      } catch (error) {
-        console.error(`处理${stockInfo.stock}时发生错误:`, error)
-        // 继续处理下一只股票
-      }
-    }
+    console.log(`成功获取 ${processedStocks.length}/${stocks.length} 只股票数据`)
 
     // 批量存储到indexDB
     if (processedStocks.length > 0) {
+      // 先清空原有数据
+      await clearAllStockData()
+      // 存储新数据
       await batchSaveStockData(processedStocks)
       console.log(`成功存储${processedStocks.length}只股票数据到indexDB`)
       return {
