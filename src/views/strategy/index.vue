@@ -31,10 +31,10 @@
   // 计算当前仓位（买入或持有的分配资金之和）
   const currentPosition = computed(() => {
     return evaluationResults.value.reduce((sum, stock) => {
-      // 只有买入或持有信号才计入仓位
+      // 只有低点或上升形态才计入仓位
       if (
         stock.allocation > 0 &&
-        (stock.tradingSignal?.signal === '买入' || stock.tradingSignal?.signal === '持有')
+        (stock.tradingShape?.shape === '低点' || stock.tradingShape?.shape === '上升')
       ) {
         return sum + stock.allocation
       }
@@ -59,12 +59,12 @@
     saveTotalAssetsToStorage()
 
     evaluationResults.value.forEach((stock, index) => {
-      // 只有前8名且有买入/持有信号才分配资金
-      const signal = stock.tradingSignal?.signal
-      const isValidSignal = signal === '买入' || signal === '持有'
+      // 只有前8名且有低点/上升形态才分配资金
+      const shape = stock.tradingShape?.shape
+      const isValidShape = shape === '低点' || shape === '上升'
       const isTop8 = index < 8
 
-      if (isTop8 && isValidSignal && stock.weight > 0) {
+      if (isTop8 && isValidShape && stock.weight > 0) {
         stock.allocation = Math.floor((assets * stock.weight) / 100)
       } else {
         stock.allocation = 0
@@ -96,43 +96,6 @@
     const firstPrice = priceArr[0]
     const factor = 1000 / firstPrice
     return priceArr.map(price => price * factor)
-  }
-
-  /**
-   * 计算线性回归（用于趋势强度评估）
-   * @param {Array} y - Y值数组
-   * @returns {Object} { slope: 斜率, r2: 拟合优度 }
-   */
-  const linearRegression = y => {
-    const n = y.length
-    let sumX = 0,
-      sumY = 0,
-      sumXY = 0,
-      sumXX = 0
-
-    for (let i = 0; i < n; i++) {
-      sumX += i
-      sumY += y[i]
-      sumXY += i * y[i]
-      sumXX += i * i
-    }
-
-    const slope = (n * sumXY - sumX * sumY) / (n * sumXX - sumX * sumX)
-    const intercept = (sumY - slope * sumX) / n
-
-    // 计算拟合优度R²
-    let ssTotal = 0,
-      ssResidual = 0
-    const meanY = sumY / n
-
-    for (let i = 0; i < n; i++) {
-      ssTotal += Math.pow(y[i] - meanY, 2)
-      ssResidual += Math.pow(y[i] - (slope * i + intercept), 2)
-    }
-
-    const r2 = 1 - ssResidual / ssTotal
-
-    return { slope, r2, intercept }
   }
 
   /**
@@ -199,23 +162,23 @@
   }
 
   /**
-   * 计算交易信号
-   * @param {number} a - 前天JMA
-   * @param {number} b - 昨天JMA
-   * @param {number} c - 今天JMA
-   * @returns {Object} { signal: 信号文本, color: 颜色值 }
+   * 计算交易形态
+   * @param {number} prevPrevJma - 前天JMA
+   * @param {number} prevJma - 昨天JMA
+   * @param {number} currentJma - 今天JMA
+   * @returns {Object} { shape: 形态文本, color: 颜色值 }
    */
-  const calculateSignal = (a, b, c) => {
-    if (a > b && c > b) {
-      return { signal: '买入', color: '#ff0000' }
-    } else if (a < b && c < b) {
-      return { signal: '卖出', color: '#00ff00' }
-    } else if (a < b && b < c) {
-      return { signal: '持有', color: '#ffa500' }
-    } else if (a > b && b > c) {
-      return { signal: '空仓', color: '#0000ff' }
+  const calculateShape = (prevPrevJma, prevJma, currentJma) => {
+    if (prevPrevJma > prevJma && currentJma > prevJma) {
+      return { shape: '低点', color: '#ff0000' }
+    } else if (prevPrevJma < prevJma && currentJma < prevJma) {
+      return { shape: '高点', color: '#00ff00' }
+    } else if (prevPrevJma < prevJma && prevJma < currentJma) {
+      return { shape: '上升', color: '#ffa500' }
+    } else if (prevPrevJma > prevJma && prevJma > currentJma) {
+      return { shape: '下降', color: '#0000ff' }
     } else {
-      return { signal: '观望', color: '#999999' }
+      return { shape: '未知', color: '#999999' }
     }
   }
 
@@ -230,14 +193,9 @@
 
       const dateArr = stock.dateArr.slice(startIndex)
       const priceArr = stock.priceArr.slice(startIndex)
-      const volumeArr = stock.volumnArr.slice(startIndex)
       const normalizedPrices = normalizePrices(priceArr)
 
-      const regression = linearRegression(normalizedPrices)
       const n = normalizedPrices.length
-      const mean = normalizedPrices.reduce((a, b) => a + b, 0) / n
-      const variance = normalizedPrices.reduce((a, b) => a + Math.pow(b - mean, 2), 0) / n
-      const stdDev = Math.sqrt(variance)
 
       // 下跌倾向：统计近200个交易日中下跌的天数占比
       let downDayCount = 0
@@ -258,16 +216,6 @@
         returns.reduce((a, b) => a + Math.pow(b - meanReturn, 2), 0) / returns.length
       const stdReturn = Math.sqrt(varianceReturn)
 
-      // 波动幅度
-      const maxPrice = Math.max(...normalizedPrices)
-      const minPrice = Math.min(...normalizedPrices)
-
-      // 成交量波动性
-      const meanVolume = volumeArr.reduce((a, b) => a + b, 0) / volumeArr.length
-      const volumeVariance =
-        volumeArr.reduce((a, b) => a + Math.pow(b - meanVolume, 2), 0) / volumeArr.length
-      const volumeStd = Math.sqrt(volumeVariance)
-
       // 趋势强度：计算连续相同方向的最长段（衡量趋势持续性）
       let maxConsistentRun = 1
       let currentRun = 1
@@ -284,39 +232,14 @@
       maxConsistentRun = Math.max(maxConsistentRun, currentRun)
       const trendStrength = maxConsistentRun / n // 归一化到0-1
 
-      // 震荡频率
-      let directionChangeCount = 0
-      let lastDirectionOsc = null
-      for (let i = 1; i < n; i++) {
-        const direction = normalizedPrices[i] > normalizedPrices[i - 1] ? 1 : -1
-        if (lastDirectionOsc !== null && direction !== lastDirectionOsc) {
-          directionChangeCount++
-        }
-        lastDirectionOsc = direction
-      }
-
-      // 终点与起点偏差幅度
-      const startEndDiff =
-        Math.abs(normalizedPrices[n - 1] - normalizedPrices[0]) / normalizedPrices[0]
-
-      // 移动平均线乖离率
-      const ma5 = normalizedPrices.slice(-5).reduce((a, b) => a + b, 0) / 5
-      const ma10 = normalizedPrices.slice(-10).reduce((a, b) => a + b, 0) / 10
-      const ma20 = normalizedPrices.slice(-20).reduce((a, b) => a + b, 0) / 20
-      const current = normalizedPrices[n - 1]
-      const deviation5 = Math.abs(current - ma5) / ma5
-      const deviation10 = Math.abs(current - ma10) / ma10
-      const deviation20 = Math.abs(current - ma20) / ma20
-      const maDeviation = deviation5 + deviation10 + deviation20
-
-      // 计算JMA并获取交易信号（使用全部价格数据）
+      // 计算JMA并获取交易形态（使用全部价格数据）
       const jmaArr = calculateJMA(stock.priceArr)
-      let tradingSignal = { signal: '-', color: '#999999' }
+      let tradingShape = { shape: '-', color: '#999999' }
       if (jmaArr.length >= 3) {
-        const a = jmaArr[jmaArr.length - 3]
-        const b = jmaArr[jmaArr.length - 2]
-        const c = jmaArr[jmaArr.length - 1]
-        tradingSignal = calculateSignal(a, b, c)
+        const prevPrevJma = jmaArr[jmaArr.length - 3]
+        const prevJma = jmaArr[jmaArr.length - 2]
+        const currentJma = jmaArr[jmaArr.length - 1]
+        tradingShape = calculateShape(prevPrevJma, prevJma, currentJma)
       }
 
       // 计算ATR14和平均真实波动率
@@ -327,42 +250,35 @@
       return {
         name: stock.plate || stock.stock,
         date: dateArr[dateArr.length - 1],
-        tradingSignal, // 交易信号
+        tradingShape, // 交易形态
         atr14, // ATR14值
         atrRate, // 平均真实波动率（ATR14/收盘价，百分比）
-        // 10个维度的原始值
+        // 3个维度的原始值
         dim1_trendStrength: trendStrength, // 维度1：趋势强度（越大越好）
         dim2_downwardTrend: downTrendRatio, // 维度2：下跌倾向（越大越好，下跌天数占比）
-        dim3_stability: stdDev, // 维度3：价格稳定性（标准差越小越好）
-        dim4_consistency: regression.r2, // 维度4：拟合优度（越大越好）
-        dim5_deviation: startEndDiff, // 维度5：偏差幅度（越大越好）
-        dim6_maDeviation: maDeviation, // 维度6：均线乖离率（越小越好）
         dim7_priceVolatility: stdReturn, // 维度7：价格波动率（越大越好）
-        dim8_amplitude: (maxPrice - minPrice) / minPrice, // 维度8：波动幅度（越大越好）
-        dim9_volumeVolatility: volumeStd / meanVolume, // 维度9：成交量波动性（越大越好）
-        dim10_oscillation: directionChangeCount / n, // 维度10：震荡频率（越小越好）
       }
     })
 
     // 第二步：只计算3个维度的评分
     const dim1Scores = rankAndScore(
       stockRawValues.map(v => v.dim1_trendStrength),
-      30,
-      1.5,
+      3300,
+      165,
       true,
-    ) // 趋势强度：30分，间隔1.5，越大越好
+    ) // 趋势强度：3300分，间隔165分，越大越好
     const dim2Scores = rankAndScore(
       stockRawValues.map(v => v.dim2_downwardTrend),
-      30,
-      1.5,
+      3200,
+      160,
       true,
-    ) // 下跌倾向：30分，间隔1.5，越大越好（下跌天数占比）
+    ) // 下跌倾向：3200分，间隔160，越大越好（下跌天数占比）
     const dim7Scores = rankAndScore(
       stockRawValues.map(v => v.dim7_priceVolatility),
-      40,
-      2,
+      3500,
+      175,
       true,
-    ) // 价格波动：40分，间隔2，越大越好
+    ) // 价格波动：3500分，间隔175，越大越好
 
     // 第三步：计算总分（只包含3个维度）
     const results = stockRawValues.map((stock, index) => {
@@ -371,7 +287,7 @@
       return {
         name: stock.name,
         date: stock.date,
-        tradingSignal: stock.tradingSignal, // 交易信号
+        tradingShape: stock.tradingShape, // 交易形态
         atr14: stock.atr14,
         atrRate: stock.atrRate,
         totalScore,
@@ -393,7 +309,7 @@
     const sumInverse = inverseRates.reduce((sum, inv) => sum + inv, 0)
 
     // 分配权重，保留1位小数
-    let weights = results.map((stock, index) => {
+    let weights = results.map((_stock, index) => {
       if (index < 8) {
         const weight = (inverseRates[index] / sumInverse) * 80
         return Math.round(weight * 10) / 10 // 保留1位小数
@@ -510,38 +426,38 @@
           <ElTable :data="tableData" border :row-class-name="getRowClassName" style="width: 100%">
             <ElTableColumn prop="name" label="名称" />
             <ElTableColumn prop="date" label="日期" />
-            <ElTableColumn label="交易信号">
+            <ElTableColumn label="交易形态">
               <template #default="{ row }">
-                <span :style="{ color: row.tradingSignal?.color || '#999', fontWeight: 'bold' }">
-                  {{ row.tradingSignal?.signal || '-' }}
+                <span :style="{ color: row.tradingShape?.color || '#999', fontWeight: 'bold' }">
+                  {{ row.tradingShape?.shape || '-' }}
                 </span>
               </template>
             </ElTableColumn>
             <ElTableColumn prop="totalScore" label="总分">
               <template #default="{ row }">
-                <el-tag :type="row.totalScore >= 80 ? 'success' : 'warning'">
-                  {{ row.totalScore.toFixed(1) }}
+                <el-tag type="success">
+                  {{ row.totalScore }}
+                </el-tag>
+              </template>
+            </ElTableColumn>
+            <ElTableColumn label="价格波动★">
+              <template #default="{ row }">
+                <el-tag type="danger">
+                  {{ row.volatilityScores[0] }}
                 </el-tag>
               </template>
             </ElTableColumn>
             <ElTableColumn label="趋势强度★">
               <template #default="{ row }">
                 <el-tag type="danger">
-                  {{ row.trendScores[0].toFixed(1) }}
+                  {{ row.trendScores[0] }}
                 </el-tag>
               </template>
             </ElTableColumn>
             <ElTableColumn label="下跌倾向★">
               <template #default="{ row }">
                 <el-tag type="danger">
-                  {{ row.trendScores[1].toFixed(1) }}
-                </el-tag>
-              </template>
-            </ElTableColumn>
-            <ElTableColumn label="价格波动★">
-              <template #default="{ row }">
-                <el-tag type="warning">
-                  {{ row.volatilityScores[0].toFixed(1) }}
+                  {{ row.trendScores[1] }}
                 </el-tag>
               </template>
             </ElTableColumn>
@@ -570,7 +486,7 @@
               <template #default="{ row }">
                 <ElTag
                   v-if="row.allocation > 0"
-                  :type="row.tradingSignal?.signal === '买入' ? 'success' : 'warning'"
+                  :type="row.tradingShape?.shape === '低点' ? 'success' : 'warning'"
                 >
                   {{ row.allocation.toLocaleString() }}
                 </ElTag>
