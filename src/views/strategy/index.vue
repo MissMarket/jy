@@ -5,6 +5,7 @@
   import { ElMessage } from 'element-plus'
   import calculateJMA from '@/signalModule'
   import { debounce } from 'lodash'
+  import dayjs from 'dayjs'
 
   const loading = ref(true)
   const stockData = ref([])
@@ -182,6 +183,83 @@
     }
   }
 
+  // 交易信号颜色映射
+  const signalColorMap = {
+    买入: '#ff0000', // 低点颜色
+    持有: '#ffa500', // 上升颜色
+    卖出: '#00ff00', // 高点颜色
+    空仓: '#0000ff', // 下降颜色
+  }
+
+  /**
+   * 计算交易信号
+   * @param {Array} data - 包含date和shape的数组
+   * @returns {Array} 添加了signal和signalColor字段的数组
+   */
+  const calculateTradingSignal = data => {
+    // 按日期从小到大排序
+    const sortedData = [...data].sort((a, b) => dayjs(a.date).valueOf() - dayjs(b.date).valueOf())
+
+    let s = '空仓' // 初始状态
+    let buyDate = null // 买入日期
+
+    sortedData.forEach(item => {
+      const shape = item.shape
+
+      if (s === '空仓') {
+        if (shape === '低点') {
+          s = '买入'
+        }
+        // 其他情况保持空仓
+      } else if (s === '买入') {
+        buyDate = dayjs(item.date).format('YYYY-MM-DD')
+        s = '持有'
+      } else if (s === '持有') {
+        if (shape === '上升' || shape === '低点') {
+          s = '持有'
+        } else if (shape === '高点' || shape === '下降') {
+          // 获取当前日期的星期
+          const currentDate = dayjs(item.date)
+          const dayOfWeek = currentDate.day() // 0是周日，1-5是周一到周五
+
+          // 计算卖出日期
+          let sellDate
+          if (dayOfWeek >= 1 && dayOfWeek <= 4) {
+            // 周一到周四，加1天
+            sellDate = currentDate.add(1, 'day')
+          } else if (dayOfWeek === 5) {
+            // 周五，加3天（跳过周末）
+            sellDate = currentDate.add(3, 'day')
+          } else {
+            // 周日，不应该出现，但做兼容处理
+            sellDate = currentDate.add(1, 'day')
+          }
+
+          // 计算持有天数
+          const holdDays = sellDate.diff(dayjs(buyDate), 'day')
+
+          if (holdDays >= 7) {
+            s = '卖出'
+          } else {
+            s = '持有'
+          }
+        }
+      } else if (s === '卖出') {
+        if (shape === '低点') {
+          s = '买入'
+        } else if (shape === '下降') {
+          s = '空仓'
+        }
+        // 其他情况保持卖出状态
+      }
+
+      item.signal = s
+      item.signalColor = signalColorMap[s]
+    })
+
+    return sortedData
+  }
+
   /**
    * 批量评估所有股票（使用排名评分方式）
    */
@@ -234,6 +312,7 @@
 
       // 计算JMA并获取交易形态（使用全部价格数据）
       const jmaArr = calculateJMA(stock.priceArr)
+      console.log('jmaArr', jmaArr)
       let tradingShape = { shape: '-', color: '#999999' }
       if (jmaArr.length >= 3) {
         const prevPrevJma = jmaArr[jmaArr.length - 3]
@@ -247,10 +326,39 @@
       const currentPrice = stock.priceArr[stock.priceArr.length - 1]
       const atrRate = currentPrice > 0 ? (atr14 / currentPrice) * 100 : 0 // 转换为百分比
 
+      // 计算历史交易信号（用于获取最后一个交易日的信号）
+      let lastTradingSignal = { signal: '-', color: '#999999' }
+      if (jmaArr.length >= 3) {
+        // 构建历史数据（date + shape）
+        const historyData = []
+        for (let i = startIndex; i < stock.dateArr.length; i++) {
+          const jmaIndex = i
+          if (jmaIndex >= 2 && jmaIndex < jmaArr.length) {
+            const prevPrevJma = jmaArr[jmaIndex - 2]
+            const prevJma = jmaArr[jmaIndex - 1]
+            const currentJma = jmaArr[jmaIndex]
+            const shapeObj = calculateShape(prevPrevJma, prevJma, currentJma)
+            historyData.push({
+              date: stock.dateArr[i],
+              shape: shapeObj.shape,
+            })
+          }
+        }
+
+        if (historyData.length > 0) {
+          // 计算交易信号
+          const signalData = calculateTradingSignal(historyData)
+          // 获取最后一个交易日的信号
+          const lastData = signalData[signalData.length - 1]
+          lastTradingSignal = { signal: lastData.signal, color: lastData.signalColor }
+        }
+      }
+
       return {
         name: stock.plate || stock.stock,
         date: dateArr[dateArr.length - 1],
         tradingShape, // 交易形态
+        tradingSignal: lastTradingSignal, // 最后一个交易日的交易信号
         atr14, // ATR14值
         atrRate, // 平均真实波动率（ATR14/收盘价，百分比）
         // 3个维度的原始值
@@ -288,6 +396,7 @@
         name: stock.name,
         date: stock.date,
         tradingShape: stock.tradingShape, // 交易形态
+        tradingSignal: stock.tradingSignal, // 最后一个交易日的交易信号
         atr14: stock.atr14,
         atrRate: stock.atrRate,
         totalScore,
@@ -298,7 +407,7 @@
 
     // 按总分从高到低排序
     results.sort((a, b) => b.totalScore - a.totalScore)
-
+    console.log('results', stockData.value)
     // 计算前8名的权重（基于平均真实波动率的倒数）
     const top8 = results.slice(0, 8)
     const inverseRates = top8.map(stock => {
@@ -430,6 +539,13 @@
               <template #default="{ row }">
                 <span :style="{ color: row.tradingShape?.color || '#999', fontWeight: 'bold' }">
                   {{ row.tradingShape?.shape || '-' }}
+                </span>
+              </template>
+            </ElTableColumn>
+            <ElTableColumn label="交易信号">
+              <template #default="{ row }">
+                <span :style="{ color: row.tradingSignal?.color || '#999', fontWeight: 'bold' }">
+                  {{ row.tradingSignal?.signal || '-' }}
                 </span>
               </template>
             </ElTableColumn>

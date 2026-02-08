@@ -2,6 +2,7 @@
   import { ref, computed, onMounted, watch } from 'vue'
   import { getStockHistoricalData } from '@/dataModule'
   import calculateJMA from '@/signalModule'
+  import dayjs from 'dayjs'
 
   const loading = ref(true)
   const stockList = ref([])
@@ -10,24 +11,101 @@
   const pageSize = 10
 
   /**
-   * 计算交易信号
-   * @param {number} a - 前天JMA
-   * @param {number} b - 昨天JMA
-   * @param {number} c - 今天JMA
-   * @returns {Object} { signal: 信号文本, color: 颜色值 }
+   * 计算交易形态
+   * @param {number} prevPrevJma - 前天JMA
+   * @param {number} prevJma - 昨天JMA
+   * @param {number} currentJma - 今天JMA
+   * @returns {Object} { shape: 形态文本, color: 颜色值 }
    */
-  const calculateSignal = (a, b, c) => {
-    if (a > b && c > b) {
-      return { signal: '买入', color: '#ff0000' }
-    } else if (a < b && c < b) {
-      return { signal: '卖出', color: '#00ff00' }
-    } else if (a < b && b < c) {
-      return { signal: '持有', color: '#ffa500' }
-    } else if (a > b && b > c) {
-      return { signal: '空仓', color: '#0000ff' }
+  const calculateShape = (prevPrevJma, prevJma, currentJma) => {
+    if (prevPrevJma > prevJma && currentJma > prevJma) {
+      return { shape: '低点', color: '#ff0000' }
+    } else if (prevPrevJma < prevJma && currentJma < prevJma) {
+      return { shape: '高点', color: '#00ff00' }
+    } else if (prevPrevJma < prevJma && prevJma < currentJma) {
+      return { shape: '上升', color: '#ffa500' }
+    } else if (prevPrevJma > prevJma && prevJma > currentJma) {
+      return { shape: '下降', color: '#0000ff' }
     } else {
-      return { signal: '观望', color: '#999999' }
+      return { shape: '未知', color: '#999999' }
     }
+  }
+
+  // 交易信号颜色映射
+  const signalColorMap = {
+    买入: '#ff0000', // 低点颜色
+    持有: '#ffa500', // 上升颜色
+    卖出: '#00ff00', // 高点颜色
+    空仓: '#0000ff', // 下降颜色
+  }
+
+  /**
+   * 计算交易信号
+   * @param {Array} data - 包含date和shape的数组
+   * @returns {Array} 添加了signal和signalColor字段的数组
+   */
+  const calculateTradingSignal = data => {
+    // 按日期从小到大排序
+    const sortedData = [...data].sort((a, b) => dayjs(a.date).valueOf() - dayjs(b.date).valueOf())
+
+    let s = '空仓' // 初始状态
+    let buyDate = null // 买入日期
+
+    sortedData.forEach(item => {
+      const shape = item.shape
+
+      if (s === '空仓') {
+        if (shape === '低点') {
+          s = '买入'
+        }
+        // 其他情况保持空仓
+      } else if (s === '买入') {
+        buyDate = dayjs(item.date).format('YYYY-MM-DD')
+        s = '持有'
+      } else if (s === '持有') {
+        if (shape === '上升' || shape === '低点') {
+          s = '持有'
+        } else if (shape === '高点' || shape === '下降') {
+          // 获取当前日期的星期
+          const currentDate = dayjs(item.date)
+          const dayOfWeek = currentDate.day() // 0是周日，1-5是周一到周五
+
+          // 计算卖出日期
+          let sellDate
+          if (dayOfWeek >= 1 && dayOfWeek <= 4) {
+            // 周一到周四，加1天
+            sellDate = currentDate.add(1, 'day')
+          } else if (dayOfWeek === 5) {
+            // 周五，加3天（跳过周末）
+            sellDate = currentDate.add(3, 'day')
+          } else {
+            // 周日，不应该出现，但做兼容处理
+            sellDate = currentDate.add(1, 'day')
+          }
+
+          // 计算持有天数
+          const holdDays = sellDate.diff(dayjs(buyDate), 'day')
+
+          if (holdDays >= 7) {
+            s = '卖出'
+          } else {
+            s = '持有'
+          }
+        }
+      } else if (s === '卖出') {
+        if (shape === '低点') {
+          s = '买入'
+        } else if (shape === '下降') {
+          s = '空仓'
+        }
+        // 其他情况保持卖出状态？根据需求，应该继续判断
+      }
+
+      item.signal = s
+      item.signalColor = signalColorMap[s]
+    })
+
+    return sortedData
   }
 
   const tableData = computed(() => {
@@ -48,36 +126,39 @@
       // sliceIndex 是在切片后的索引（0到199）
       // originalIndex 是在整个数组中的原始索引
       const originalIndex = startIndex + sliceIndex
-      let signal = { signal: '-', color: '#999999' }
 
       // 计算在JMA数组中的索引（与原始索引相同）
       const jmaIndex = originalIndex
 
-      // 如果有足够的JMA数据计算信号（需要至少3天）
+      // 如果有足够的JMA数据计算形态（需要至少3天）
+      let tradingShape = { shape: '-', color: '#999999' }
       if (jmaIndex >= 2 && jmaIndex < jmaArr.length) {
-        const a = jmaArr[jmaIndex - 2]
-        const b = jmaArr[jmaIndex - 1]
-        const c = jmaArr[jmaIndex]
-        signal = calculateSignal(a, b, c)
+        const prevPrevJma = jmaArr[jmaIndex - 2]
+        const prevJma = jmaArr[jmaIndex - 1]
+        const currentJma = jmaArr[jmaIndex]
+        tradingShape = calculateShape(prevPrevJma, prevJma, currentJma)
       }
-
       return {
         plate: stockData.plate,
         date,
         price: stockData.priceArr?.[originalIndex] || 0,
         volumn: stockData.volumnArr?.[originalIndex] || 0,
         jma: jmaArr[jmaIndex] || 0,
-        signal: signal.signal,
-        signalColor: signal.color,
+        shape: tradingShape.shape,
+        shapeColor: tradingShape.color,
       }
     })
 
-    return result.reverse()
+    // 计算交易信号
+    const resultWithSignal = calculateTradingSignal(result)
+
+    return resultWithSignal.reverse()
   })
 
   const paginatedData = computed(() => {
     const start = (currentPage.value - 1) * pageSize
     const end = start + pageSize
+    console.log('paginatedData', tableData.value)
     return tableData.value.slice(start, end)
   })
 
@@ -136,6 +217,13 @@
         <ElTable :data="paginatedData" border style="width: 100%">
           <TableColumn prop="plate" label="名称" width="150" />
           <TableColumn prop="date" label="日期" width="120" />
+          <TableColumn label="交易形态" width="100">
+            <template #default="{ row }">
+              <span :style="{ color: row.shapeColor, fontWeight: 'bold' }">
+                {{ row.shape }}
+              </span>
+            </template>
+          </TableColumn>
           <TableColumn label="交易信号" width="100">
             <template #default="{ row }">
               <span :style="{ color: row.signalColor, fontWeight: 'bold' }">
