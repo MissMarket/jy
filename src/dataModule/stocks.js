@@ -7,9 +7,9 @@ export default [
   },
   {
     plate: '有色',
-    stock: '有色龙头ETF',
-    id: 'SZ159876',
-    fund: '财通资管中证有色金属指数C',
+    stock: '细分有色',
+    id: 'SH000811',
+    fund: '易方达中证细分有色金属产业主题指数发起式C',
   },
   {
     plate: '农业',

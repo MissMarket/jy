@@ -1,14 +1,25 @@
 <script setup>
   import { ref, onMounted, computed } from 'vue'
-  import { getStockHistoricalData } from '@/dataModule'
   import { TrendCharts } from '@element-plus/icons-vue'
-  import { ElMessage } from 'element-plus'
+  import {
+    ElMessage,
+    ElCard,
+    ElPagination,
+    ElIcon,
+    ElInputNumber,
+    ElTable,
+    ElTableColumn,
+    ElTag,
+  } from 'element-plus'
+  import { useStockData } from '@/composables/useStockData'
+  import { calculateShape, calculateTradingSignal } from '@/utils'
   import calculateJMA from '@/signalModule'
-  import { debounce } from 'lodash'
-  import dayjs from 'dayjs'
+  import TradingSignal from '@/components/TradingSignal.vue'
 
-  const loading = ref(true)
-  const stockData = ref([])
+  // 组合式函数
+  const { loading, stockData, fetchStockData } = useStockData()
+
+  // 响应式数据
   const evaluationResults = ref([])
   const currentPage = ref(1)
   const pageSize = 10
@@ -22,7 +33,7 @@
         return isNaN(value) ? 100000 : value
       }
     } catch (error) {
-      console.warn('读取总资产缓存失败:', error)
+      // 静默处理错误
     }
     return 100000
   }
@@ -48,7 +59,7 @@
     try {
       localStorage.setItem('strategy_totalAssets', totalAssets.value.toString())
     } catch (error) {
-      console.warn('保存总资产缓存失败:', error)
+      // 静默处理错误
     }
   }
 
@@ -73,11 +84,6 @@
     })
   }
 
-  // 防抖处理，2秒后触发计算
-  const debouncedCalculate = debounce(() => {
-    calculateAllocation()
-  }, 2000)
-
   // 处理总资产输入变化
   const handleAssetsChange = () => {
     // 确保只能输入正整数
@@ -85,7 +91,7 @@
       totalAssets.value = 0
     }
     totalAssets.value = Math.floor(totalAssets.value)
-    debouncedCalculate()
+    calculateAllocation()
   }
 
   /**
@@ -163,104 +169,6 @@
   }
 
   /**
-   * 计算交易形态
-   * @param {number} prevPrevJma - 前天JMA
-   * @param {number} prevJma - 昨天JMA
-   * @param {number} currentJma - 今天JMA
-   * @returns {Object} { shape: 形态文本, color: 颜色值 }
-   */
-  const calculateShape = (prevPrevJma, prevJma, currentJma) => {
-    if (prevPrevJma > prevJma && currentJma > prevJma) {
-      return { shape: '低点', color: '#ff0000' }
-    } else if (prevPrevJma < prevJma && currentJma < prevJma) {
-      return { shape: '高点', color: '#00ff00' }
-    } else if (prevPrevJma < prevJma && prevJma < currentJma) {
-      return { shape: '上升', color: '#ffa500' }
-    } else if (prevPrevJma > prevJma && prevJma > currentJma) {
-      return { shape: '下降', color: '#0000ff' }
-    } else {
-      return { shape: '未知', color: '#999999' }
-    }
-  }
-
-  // 交易信号颜色映射
-  const signalColorMap = {
-    买入: '#ff0000', // 低点颜色
-    持有: '#ffa500', // 上升颜色
-    卖出: '#00ff00', // 高点颜色
-    空仓: '#0000ff', // 下降颜色
-  }
-
-  /**
-   * 计算交易信号
-   * @param {Array} data - 包含date和shape的数组
-   * @returns {Array} 添加了signal和signalColor字段的数组
-   */
-  const calculateTradingSignal = data => {
-    // 按日期从小到大排序
-    const sortedData = [...data].sort((a, b) => dayjs(a.date).valueOf() - dayjs(b.date).valueOf())
-
-    let s = '空仓' // 初始状态
-    let buyDate = null // 买入日期
-
-    sortedData.forEach(item => {
-      const shape = item.shape
-
-      if (s === '空仓') {
-        if (shape === '低点') {
-          s = '买入'
-        }
-        // 其他情况保持空仓
-      } else if (s === '买入') {
-        buyDate = dayjs(item.date).format('YYYY-MM-DD')
-        s = '持有'
-      } else if (s === '持有') {
-        if (shape === '上升' || shape === '低点') {
-          s = '持有'
-        } else if (shape === '高点' || shape === '下降') {
-          // 获取当前日期的星期
-          const currentDate = dayjs(item.date)
-          const dayOfWeek = currentDate.day() // 0是周日，1-5是周一到周五
-
-          // 计算卖出日期
-          let sellDate
-          if (dayOfWeek >= 1 && dayOfWeek <= 4) {
-            // 周一到周四，加1天
-            sellDate = currentDate.add(1, 'day')
-          } else if (dayOfWeek === 5) {
-            // 周五，加3天（跳过周末）
-            sellDate = currentDate.add(3, 'day')
-          } else {
-            // 周日，不应该出现，但做兼容处理
-            sellDate = currentDate.add(1, 'day')
-          }
-
-          // 计算持有天数
-          const holdDays = sellDate.diff(dayjs(buyDate), 'day')
-
-          if (holdDays >= 7) {
-            s = '卖出'
-          } else {
-            s = '持有'
-          }
-        }
-      } else if (s === '卖出') {
-        if (shape === '低点') {
-          s = '买入'
-        } else if (shape === '下降') {
-          s = '空仓'
-        }
-        // 其他情况保持卖出状态
-      }
-
-      item.signal = s
-      item.signalColor = signalColorMap[s]
-    })
-
-    return sortedData
-  }
-
-  /**
    * 批量评估所有股票（使用排名评分方式）
    */
   const evaluateAllStocks = () => {
@@ -312,7 +220,6 @@
 
       // 计算JMA并获取交易形态（使用全部价格数据）
       const jmaArr = calculateJMA(stock.priceArr)
-      console.log('jmaArr', jmaArr)
       let tradingShape = { shape: '-', color: '#999999' }
       if (jmaArr.length >= 3) {
         const prevPrevJma = jmaArr[jmaArr.length - 3]
@@ -407,7 +314,7 @@
 
     // 按总分从高到低排序
     results.sort((a, b) => b.totalScore - a.totalScore)
-    console.log('results', stockData.value)
+
     // 计算前8名的权重（基于平均真实波动率的倒数）
     const top8 = results.slice(0, 8)
     const inverseRates = top8.map(stock => {
@@ -477,16 +384,11 @@
    * 获取数据
    */
   const fetchData = async () => {
-    loading.value = true
     try {
-      const result = await getStockHistoricalData()
-      stockData.value = result
+      await fetchStockData()
       evaluateAllStocks()
     } catch (error) {
-      console.error('获取数据失败:', error)
       ElMessage.error('获取数据失败')
-    } finally {
-      loading.value = false
     }
   }
 
@@ -497,13 +399,13 @@
 
 <template>
   <div class="strategy-container">
-    <Card shadow="never">
+    <ElCard shadow="never" class="main-card">
       <template #header>
         <div class="page-header">
           <div class="header-left">
-            <Icon :size="22">
+            <ElIcon :size="24">
               <TrendCharts />
-            </Icon>
+            </ElIcon>
             <span class="header-title">交易策略评估</span>
           </div>
           <div class="header-right">
@@ -532,61 +434,65 @@
 
       <div v-else>
         <div class="table-section">
-          <ElTable :data="tableData" border :row-class-name="getRowClassName" style="width: 100%">
-            <ElTableColumn prop="name" label="名称" />
-            <ElTableColumn prop="date" label="日期" />
-            <ElTableColumn label="交易形态">
+          <ElTable
+            :data="tableData"
+            border
+            :row-class-name="getRowClassName"
+            style="width: 100%"
+            class="data-table"
+            size="small"
+          >
+            <ElTableColumn prop="name" label="名称" width="100" />
+            <ElTableColumn prop="date" label="日期" width="110" />
+            <ElTableColumn label="交易形态" width="90">
               <template #default="{ row }">
-                <span :style="{ color: row.tradingShape?.color || '#999', fontWeight: 'bold' }">
-                  {{ row.tradingShape?.shape || '-' }}
-                </span>
+                <TradingSignal :shape="row.tradingShape" :signal="null" shape-label="" />
               </template>
             </ElTableColumn>
-            <ElTableColumn label="交易信号">
+            <ElTableColumn label="交易信号" width="90">
               <template #default="{ row }">
-                <span :style="{ color: row.tradingSignal?.color || '#999', fontWeight: 'bold' }">
-                  {{ row.tradingSignal?.signal || '-' }}
-                </span>
+                <TradingSignal :shape="null" :signal="row.tradingSignal" signal-label="" />
               </template>
             </ElTableColumn>
-            <ElTableColumn prop="totalScore" label="总分">
+            <ElTableColumn prop="totalScore" label="总分" width="100">
               <template #default="{ row }">
-                <el-tag type="success">
+                <ElTag type="success" size="small">
                   {{ row.totalScore }}
-                </el-tag>
+                </ElTag>
               </template>
             </ElTableColumn>
-            <ElTableColumn label="价格波动★">
+            <ElTableColumn label="价格波动★" width="110">
               <template #default="{ row }">
-                <el-tag type="danger">
+                <ElTag type="danger" size="small">
                   {{ row.volatilityScores[0] }}
-                </el-tag>
+                </ElTag>
               </template>
             </ElTableColumn>
-            <ElTableColumn label="趋势强度★">
+            <ElTableColumn label="趋势强度★" width="110">
               <template #default="{ row }">
-                <el-tag type="danger">
+                <ElTag type="danger" size="small">
                   {{ row.trendScores[0] }}
-                </el-tag>
+                </ElTag>
               </template>
             </ElTableColumn>
-            <ElTableColumn label="下跌倾向★">
+            <ElTableColumn label="下跌倾向★" width="110">
               <template #default="{ row }">
-                <el-tag type="danger">
+                <ElTag type="danger" size="small">
                   {{ row.trendScores[1] }}
-                </el-tag>
+                </ElTag>
               </template>
             </ElTableColumn>
-            <ElTableColumn label="平均真实波动率">
+            <ElTableColumn label="平均真实波动率" width="130">
               <template #default="{ row }">
-                <el-tag
+                <ElTag
                   :type="row.atrRate > 2 ? 'danger' : row.atrRate > 1 ? 'warning' : 'success'"
+                  size="small"
                 >
                   {{ row.atrRate.toFixed(2) }}%
-                </el-tag>
+                </ElTag>
               </template>
             </ElTableColumn>
-            <ElTableColumn prop="weight" label="权重" width="80">
+            <ElTableColumn prop="weight" label="权重" width="70">
               <template #default="{ row }">
                 <span
                   :style="{
@@ -603,6 +509,7 @@
                 <ElTag
                   v-if="row.allocation > 0"
                   :type="row.tradingShape?.shape === '低点' ? 'success' : 'warning'"
+                  size="small"
                 >
                   {{ row.allocation.toLocaleString() }}
                 </ElTag>
@@ -612,24 +519,34 @@
           </ElTable>
 
           <div class="pagination-section">
-            <Pagination
+            <ElPagination
               v-model:current-page="currentPage"
               :page-size="pageSize"
               :total="evaluationResults.length"
               layout="total, prev, pager, next"
+              class="data-pagination"
               @current-change="handlePageChange"
             />
           </div>
         </div>
       </div>
-    </Card>
+    </ElCard>
   </div>
 </template>
 
-<style scoped>
+<style scoped lang="scss">
+  @import '@/styles/variables.scss';
+
   .strategy-container {
     max-width: 1600px;
     margin: 0 auto;
+    padding: 0 16px;
+  }
+
+  .main-card {
+    border-radius: $border-radius-lg;
+    box-shadow: $shadow-md;
+    padding: 16px;
   }
 
   .page-header {
@@ -637,56 +554,86 @@
     align-items: center;
     justify-content: space-between;
     gap: 10px;
-    font-size: 18px;
-    font-weight: 500;
-    color: #1890ff;
+    font-size: $font-size-lg;
+    font-weight: $font-weight-semibold;
+    color: $primary-color;
+    flex-wrap: wrap;
+    margin-bottom: 16px;
   }
 
   .header-left {
     display: flex;
     align-items: center;
-    gap: 10px;
+    gap: 8px;
   }
 
   .header-right {
     display: flex;
     align-items: center;
-    gap: 24px;
+    gap: 16px;
+    flex-wrap: wrap;
   }
 
   .header-title {
-    font-weight: 600;
+    font-weight: $font-weight-bold;
   }
 
   .assets-input-group {
     display: flex;
     align-items: center;
-    gap: 8px;
+    gap: 6px;
   }
 
   .assets-input-group .label {
-    font-size: 14px;
-    color: #606266;
+    font-size: $font-size-sm;
+    color: $text-secondary;
   }
 
   .assets-input-group .unit {
-    font-size: 14px;
-    color: #606266;
+    font-size: $font-size-sm;
+    color: $text-secondary;
   }
 
   .position-display {
     display: flex;
     align-items: center;
-    gap: 8px;
+    gap: 6px;
   }
 
   .position-display .label {
-    font-size: 14px;
-    color: #606266;
+    font-size: $font-size-sm;
+    color: $text-secondary;
   }
 
   .table-section {
-    margin-top: 20px;
+    margin-top: 12px;
+  }
+
+  .data-table {
+    border-radius: $border-radius-md;
+    box-shadow: $shadow-sm;
+
+    :deep(.el-table__header th) {
+      background-color: $bg-tertiary;
+      font-weight: $font-weight-semibold;
+      padding: 8px 12px;
+      white-space: nowrap;
+    }
+
+    :deep(.el-table__row:hover) {
+      background-color: $bg-accent;
+    }
+
+    :deep(.el-table__cell) {
+      padding: 8px 12px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    :deep(.el-table__row) {
+      height: 40px;
+    }
   }
 
   .pagination-section {
@@ -695,20 +642,47 @@
     margin-top: 20px;
   }
 
+  .data-pagination {
+    border-radius: $border-radius-md;
+  }
+
   /* 前8名行高亮样式 */
   :deep(.el-table .top-8-row) {
-    background-color: #ffc0cb !important;
+    background-color: rgba($primary-color, 0.1) !important;
   }
 
   :deep(.el-table .top-8-row > td) {
-    background-color: #ffc0cb !important;
+    background-color: rgba($primary-color, 0.1) !important;
   }
 
   :deep(.el-table .top-8-row:hover) {
-    background-color: #ffb6c1 !important;
+    background-color: rgba($primary-color, 0.2) !important;
   }
 
   :deep(.el-table .top-8-row:hover > td) {
-    background-color: #ffb6c1 !important;
+    background-color: rgba($primary-color, 0.2) !important;
+  }
+
+  // 响应式调整
+  @media (max-width: $breakpoint-tablet) {
+    .strategy-container {
+      padding: 0 16px;
+    }
+
+    .page-header {
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 16px;
+    }
+
+    .header-right {
+      width: 100%;
+      justify-content: space-between;
+    }
+
+    .assets-input-group,
+    .position-display {
+      flex: 1;
+    }
   }
 </style>

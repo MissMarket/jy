@@ -1,0 +1,185 @@
+/**
+ * 主题色彩和样式变量
+ * 米哈游二次元风格
+ */
+
+// 主色调
+$primary-color: #ff6b6b; // 珊瑚粉
+$secondary-color: #4ecdc4; // 薄荷绿
+$accent-color: #ffd166; // 柠檬黄
+$danger-color: #ef476f; // 危险红
+$success-color: #06d6a0; // 成功绿
+$warning-color: #ffd166; // 警告黄
+$info-color: #118ab2; // 信息蓝
+
+// 背景色
+$bg-primary: #f7f9fc; // 主背景
+$bg-secondary: #ffffff; // 次要背景
+$bg-tertiary: #f0f4f8; // 三级背景
+$bg-accent: #ffe8e8; // 强调背景
+
+// 文字色
+$text-primary: #2a3b4c; // 主文字
+$text-secondary: #64748b; // 次要文字
+$text-tertiary: #94a3b8; // 三级文字
+$text-light: #ffffff; // 白色文字
+
+// 边框色
+$border-color: #e2e8f0; // 边框
+$border-hover: #cbd5e1; // 边框悬停
+
+// 阴影
+$shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+$shadow-md:
+  0 4px 6px -1px rgba(0, 0, 0, 0.1),
+  0 2px 4px -1px rgba(0, 0, 0, 0.06);
+$shadow-lg:
+  0 10px 15px -3px rgba(0, 0, 0, 0.1),
+  0 4px 6px -2px rgba(0, 0, 0, 0.05);
+$shadow-xl:
+  0 20px 25px -5px rgba(0, 0, 0, 0.1),
+  0 10px 10px -5px rgba(0, 0, 0, 0.04);
+
+// 圆角
+$border-radius-sm: 4px;
+$border-radius-md: 8px;
+$border-radius-lg: 12px;
+$border-radius-xl: 16px;
+$border-radius-full: 9999px;
+
+// 间距
+$spacing-xs: 4px;
+$spacing-sm: 8px;
+$spacing-md: 16px;
+$spacing-lg: 24px;
+$spacing-xl: 32px;
+$spacing-2xl: 48px;
+
+// 字体
+$font-family:
+  'Noto Sans SC',
+  -apple-system,
+  BlinkMacSystemFont,
+  'Segoe UI',
+  Roboto,
+  sans-serif;
+$font-family-title:
+  'Noto Sans SC',
+  -apple-system,
+  BlinkMacSystemFont,
+  'Segoe UI',
+  Roboto,
+  sans-serif;
+
+// 字体大小
+$font-size-xs: 12px;
+$font-size-sm: 14px;
+$font-size-base: 16px;
+$font-size-lg: 18px;
+$font-size-xl: 20px;
+$font-size-2xl: 24px;
+$font-size-3xl: 30px;
+$font-size-4xl: 36px;
+
+// 字体粗细
+$font-weight-normal: 400;
+$font-weight-medium: 500;
+$font-weight-semibold: 600;
+$font-weight-bold: 700;
+
+// 行高
+$line-height-tight: 1.25;
+$line-height-snug: 1.375;
+$line-height-normal: 1.5;
+$line-height-relaxed: 1.625;
+$line-height-loose: 2;
+
+// 过渡
+$transition-fast: 150ms ease-in-out;
+$transition-normal: 250ms ease-in-out;
+$transition-slow: 350ms ease-in-out;
+
+// 动画
+$animation-bounce: bounce 1s infinite;
+$animation-pulse: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+$animation-shimmer: shimmer 2s linear infinite;
+
+// 响应式断点
+$breakpoint-mobile: 768px;
+$breakpoint-tablet: 1024px;
+$breakpoint-desktop: 1200px;
+$breakpoint-xl: 1440px;
+
+// Z-index
+$z-dropdown: 1000;
+$z-sticky: 1020;
+$z-fixed: 1030;
+$z-modal-backdrop: 1040;
+$z-modal: 1050;
+$z-popover: 1060;
+$z-tooltip: 1070;
+
+// 布局
+$sidebar-width: 200px;
+$sidebar-width-mobile: 0;
+$sidebar-width-tablet: 180px;
+$header-height: 64px;
+$footer-height: 48px;
+
+// 卡片样式
+$card-bg: $bg-secondary;
+$card-border: $border-color;
+$card-shadow: $shadow-md;
+$card-radius: $border-radius-lg;
+$card-padding: $spacing-lg;
+
+// 按钮样式
+$btn-primary-bg: $primary-color;
+$btn-secondary-bg: $bg-tertiary;
+$btn-danger-bg: $danger-color;
+$btn-success-bg: $success-color;
+$btn-warning-bg: $warning-color;
+$btn-info-bg: $info-color;
+
+// 输入框样式
+$input-bg: $bg-secondary;
+$input-border: $border-color;
+$input-border-focus: $primary-color;
+$input-shadow-focus: 0 0 0 3px rgba($primary-color, 0.1);
+
+// 表格样式
+$table-header-bg: $bg-tertiary;
+$table-header-text: $text-primary;
+$table-row-hover: $bg-accent;
+
+// 动画关键帧
+@keyframes bounce {
+  0%,
+  100% {
+    transform: translateY(-25%);
+    animation-timing-function: cubic-bezier(0.8, 0, 1, 1);
+  }
+  50% {
+    transform: translateY(0);
+    animation-timing-function: cubic-bezier(0, 0, 0.2, 1);
+  }
+}
+
+@keyframes pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
+  }
+}
+
+@keyframes shimmer {
+  0% {
+    background-position: -1000px 0;
+  }
+  100% {
+    background-position: 1000px 0;
+  }
+}
