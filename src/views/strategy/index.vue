@@ -3,13 +3,11 @@
   import { TrendCharts } from '@element-plus/icons-vue'
   import {
     ElMessage,
-    ElCard,
     ElPagination,
     ElIcon,
     ElInputNumber,
     ElTable,
     ElTableColumn,
-    ElTag,
   } from 'element-plus'
   import { useStockData } from '@/composables/useStockData'
   import { calculateShape, calculateTradingSignal } from '@/utils'
@@ -399,138 +397,141 @@
 
 <template>
   <div class="strategy-container">
-    <ElCard shadow="never" class="main-card">
-      <template #header>
-        <div class="page-header">
-          <div class="header-left">
-            <ElIcon :size="24">
-              <TrendCharts />
-            </ElIcon>
-            <span class="header-title">交易策略评估</span>
-          </div>
-          <div class="header-right">
-            <div class="assets-input-group">
-              <span class="label">总资产:</span>
-              <ElInputNumber
-                v-model="totalAssets"
-                :min="0"
-                :step="10000"
-                :controls="false"
-                placeholder="请输入总资产"
-                style="width: 150px"
-                @change="handleAssetsChange"
-              />
-              <span class="unit">元</span>
-            </div>
-            <div class="position-display">
-              <span class="label">当前仓位:</span>
-              <ElTag type="primary" size="large"> {{ currentPosition.toLocaleString() }} 元 </ElTag>
-            </div>
-          </div>
+    <div class="main-card">
+      <!-- 页面头部 -->
+      <div class="page-header">
+        <div class="header-left">
+          <ElIcon :size="22">
+            <TrendCharts />
+          </ElIcon>
+          <span class="header-title">交易策略评估</span>
         </div>
-      </template>
-
-      <div v-if="loading" style="text-align: center; padding: 40px">正在加载数据...</div>
-
-      <div v-else>
-        <div class="table-section">
-          <ElTable
-            :data="tableData"
-            border
-            :row-class-name="getRowClassName"
-            style="width: 100%"
-            class="data-table"
-            size="small"
-          >
-            <ElTableColumn prop="name" label="名称" width="100" />
-            <ElTableColumn prop="date" label="日期" width="110" />
-            <ElTableColumn label="交易形态" width="90">
-              <template #default="{ row }">
-                <TradingSignal :shape="row.tradingShape" :signal="null" shape-label="" />
-              </template>
-            </ElTableColumn>
-            <ElTableColumn label="交易信号" width="90">
-              <template #default="{ row }">
-                <TradingSignal :shape="null" :signal="row.tradingSignal" signal-label="" />
-              </template>
-            </ElTableColumn>
-            <ElTableColumn prop="totalScore" label="总分" width="100">
-              <template #default="{ row }">
-                <ElTag type="success" size="small">
-                  {{ row.totalScore }}
-                </ElTag>
-              </template>
-            </ElTableColumn>
-            <ElTableColumn label="价格波动★" width="110">
-              <template #default="{ row }">
-                <ElTag type="danger" size="small">
-                  {{ row.volatilityScores[0] }}
-                </ElTag>
-              </template>
-            </ElTableColumn>
-            <ElTableColumn label="趋势强度★" width="110">
-              <template #default="{ row }">
-                <ElTag type="danger" size="small">
-                  {{ row.trendScores[0] }}
-                </ElTag>
-              </template>
-            </ElTableColumn>
-            <ElTableColumn label="下跌倾向★" width="110">
-              <template #default="{ row }">
-                <ElTag type="danger" size="small">
-                  {{ row.trendScores[1] }}
-                </ElTag>
-              </template>
-            </ElTableColumn>
-            <ElTableColumn label="平均真实波动率" width="130">
-              <template #default="{ row }">
-                <ElTag
-                  :type="row.atrRate > 2 ? 'danger' : row.atrRate > 1 ? 'warning' : 'success'"
-                  size="small"
-                >
-                  {{ row.atrRate.toFixed(2) }}%
-                </ElTag>
-              </template>
-            </ElTableColumn>
-            <ElTableColumn prop="weight" label="权重" width="70">
-              <template #default="{ row }">
-                <span
-                  :style="{
-                    fontWeight: row.weight > 0 ? 'bold' : 'normal',
-                    color: row.weight > 0 ? '#1890ff' : '#999',
-                  }"
-                >
-                  {{ row.weight.toFixed(1) }}
-                </span>
-              </template>
-            </ElTableColumn>
-            <ElTableColumn prop="allocation" label="分配资金" width="120">
-              <template #default="{ row }">
-                <ElTag
-                  v-if="row.allocation > 0"
-                  :type="row.tradingShape?.shape === '低点' ? 'success' : 'warning'"
-                  size="small"
-                >
-                  {{ row.allocation.toLocaleString() }}
-                </ElTag>
-                <span v-else style="color: #999">-</span>
-              </template>
-            </ElTableColumn>
-          </ElTable>
-
-          <div class="pagination-section">
-            <ElPagination
-              v-model:current-page="currentPage"
-              :page-size="pageSize"
-              :total="evaluationResults.length"
-              layout="total, prev, pager, next"
-              class="data-pagination"
-              @current-change="handlePageChange"
+        <div class="header-right">
+          <div class="assets-input-group">
+            <span class="label">总资产:</span>
+            <ElInputNumber
+              v-model="totalAssets"
+              :min="0"
+              :step="10000"
+              :controls="false"
+              placeholder="请输入总资产"
+              style="width: 140px"
+              @change="handleAssetsChange"
             />
+            <span class="unit">元</span>
+          </div>
+          <div class="position-display">
+            <span class="label">当前仓位:</span>
+            <div class="position-tag">{{ currentPosition.toLocaleString() }} 元</div>
           </div>
         </div>
       </div>
-    </ElCard>
+
+      <!-- 加载状态 -->
+      <div v-if="loading" class="loading-section">
+        <div class="loading-spinner" />
+        <p class="loading-text">正在加载数据...</p>
+      </div>
+
+      <!-- 表格内容 -->
+      <div v-else class="table-section">
+        <ElTable
+          :data="tableData"
+          border
+          :row-class-name="getRowClassName"
+          style="width: 100%"
+          class="data-table"
+          size="small"
+        >
+          <ElTableColumn prop="name" label="名称" width="100" />
+          <ElTableColumn prop="date" label="日期" width="110" />
+          <ElTableColumn label="交易形态" width="90">
+            <template #default="{ row }">
+              <TradingSignal :shape="row.tradingShape" :signal="null" shape-label="" />
+            </template>
+          </ElTableColumn>
+          <ElTableColumn label="交易信号" width="90">
+            <template #default="{ row }">
+              <TradingSignal :shape="null" :signal="row.tradingSignal" signal-label="" />
+            </template>
+          </ElTableColumn>
+          <ElTableColumn prop="totalScore" label="总分" width="100">
+            <template #default="{ row }">
+              <div class="score-tag success">
+                {{ row.totalScore }}
+              </div>
+            </template>
+          </ElTableColumn>
+          <ElTableColumn label="价格波动★" width="110">
+            <template #default="{ row }">
+              <div class="score-tag danger">
+                {{ row.volatilityScores[0] }}
+              </div>
+            </template>
+          </ElTableColumn>
+          <ElTableColumn label="趋势强度★" width="110">
+            <template #default="{ row }">
+              <div class="score-tag danger">
+                {{ row.trendScores[0] }}
+              </div>
+            </template>
+          </ElTableColumn>
+          <ElTableColumn label="下跌倾向★" width="110">
+            <template #default="{ row }">
+              <div class="score-tag danger">
+                {{ row.trendScores[1] }}
+              </div>
+            </template>
+          </ElTableColumn>
+          <ElTableColumn label="平均真实波动率" width="130">
+            <template #default="{ row }">
+              <div
+                class="score-tag"
+                :class="row.atrRate > 2 ? 'danger' : row.atrRate > 1 ? 'warning' : 'success'"
+              >
+                {{ row.atrRate.toFixed(2) }}%
+              </div>
+            </template>
+          </ElTableColumn>
+          <ElTableColumn prop="weight" label="权重" width="70">
+            <template #default="{ row }">
+              <span
+                :style="{
+                  fontWeight: row.weight > 0 ? 'bold' : 'normal',
+                  color: row.weight > 0 ? '#007aff' : '#999',
+                }"
+              >
+                {{ row.weight.toFixed(1) }}
+              </span>
+            </template>
+          </ElTableColumn>
+          <ElTableColumn prop="allocation" label="分配资金" width="120">
+            <template #default="{ row }">
+              <div
+                v-if="row.allocation > 0"
+                class="score-tag"
+                :class="row.tradingShape?.shape === '低点' ? 'success' : 'warning'"
+              >
+                {{ row.allocation.toLocaleString() }}
+              </div>
+              <span v-else style="color: #999">-</span>
+            </template>
+          </ElTableColumn>
+        </ElTable>
+
+        <!-- 分页 -->
+        <div class="pagination-section">
+          <ElPagination
+            v-model:current-page="currentPage"
+            :page-size="pageSize"
+            :total="evaluationResults.length"
+            layout="total, prev, pager, next"
+            class="data-pagination"
+            @current-change="handlePageChange"
+          />
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 
@@ -540,25 +541,26 @@
   .strategy-container {
     max-width: 1600px;
     margin: 0 auto;
-    padding: 0 16px;
+    padding: 16px;
   }
 
   .main-card {
-    border-radius: $border-radius-lg;
-    box-shadow: $shadow-md;
-    padding: 16px;
+    border: 1px solid #e0e0e0;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.08);
   }
 
   .page-header {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    gap: 10px;
-    font-size: $font-size-lg;
-    font-weight: $font-weight-semibold;
-    color: $primary-color;
+    gap: 12px;
+    font-size: 18px;
+    font-weight: 600;
+    color: #007aff;
     flex-wrap: wrap;
-    margin-bottom: 16px;
+    padding: 12px 16px;
+    border-bottom: 1px solid #e0e0e0;
+    background-color: #f9f9f9;
   }
 
   .header-left {
@@ -575,60 +577,95 @@
   }
 
   .header-title {
-    font-weight: $font-weight-bold;
+    font-weight: 700;
   }
 
   .assets-input-group {
     display: flex;
     align-items: center;
-    gap: 6px;
+    gap: 8px;
   }
 
   .assets-input-group .label {
-    font-size: $font-size-sm;
-    color: $text-secondary;
+    font-size: 14px;
+    color: #666666;
   }
 
   .assets-input-group .unit {
-    font-size: $font-size-sm;
-    color: $text-secondary;
+    font-size: 14px;
+    color: #666666;
   }
 
   .position-display {
     display: flex;
     align-items: center;
-    gap: 6px;
+    gap: 8px;
   }
 
   .position-display .label {
-    font-size: $font-size-sm;
-    color: $text-secondary;
+    font-size: 14px;
+    color: #666666;
+  }
+
+  .position-tag {
+    background-color: #007aff;
+    color: #ffffff;
+    padding: 4px 12px;
+    font-size: 14px;
+    font-weight: 600;
+    box-shadow: 0 1px 2px rgba(0, 122, 255, 0.3);
+  }
+
+  .loading-section {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 60px 20px;
+  }
+
+  .loading-spinner {
+    width: 32px;
+    height: 32px;
+    border: 3px solid rgba(0, 122, 255, 0.2);
+    border-top-color: #007aff;
+    border-right-color: #007aff;
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+    margin-bottom: 12px;
+  }
+
+  .loading-text {
+    color: #666666;
+    font-size: 14px;
   }
 
   .table-section {
-    margin-top: 12px;
+    padding: 16px;
   }
 
   .data-table {
-    border-radius: $border-radius-md;
-    box-shadow: $shadow-sm;
+    border: 1px solid #e0e0e0;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.06);
 
     :deep(.el-table__header th) {
-      background-color: $bg-tertiary;
-      font-weight: $font-weight-semibold;
-      padding: 8px 12px;
+      background-color: #f5f5f5;
+      font-weight: 600;
+      padding: 10px 12px;
       white-space: nowrap;
+      border-bottom: 1px solid #e0e0e0;
     }
 
     :deep(.el-table__row:hover) {
-      background-color: $bg-accent;
+      background-color: #f8f8f8;
     }
 
     :deep(.el-table__cell) {
-      padding: 8px 12px;
+      padding: 10px 12px;
       white-space: nowrap;
       overflow: hidden;
       text-overflow: ellipsis;
+      border-bottom: 1px solid #e0e0e0;
     }
 
     :deep(.el-table__row) {
@@ -639,40 +676,70 @@
   .pagination-section {
     display: flex;
     justify-content: center;
-    margin-top: 20px;
+    margin-top: 16px;
+    padding: 12px 16px;
+    border-top: 1px solid #e0e0e0;
   }
 
   .data-pagination {
-    border-radius: $border-radius-md;
+    :deep(.el-pagination__item) {
+      border-radius: 0;
+    }
+  }
+
+  /* 分数标签样式 */
+  .score-tag {
+    padding: 2px 8px;
+    font-size: 12px;
+    font-weight: 600;
+    display: inline-block;
+    text-align: center;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+  }
+
+  .score-tag.success {
+    background-color: #34c759;
+    color: #ffffff;
+  }
+
+  .score-tag.danger {
+    background-color: #ff3b30;
+    color: #ffffff;
+  }
+
+  .score-tag.warning {
+    background-color: #ff9500;
+    color: #ffffff;
   }
 
   /* 前8名行高亮样式 */
   :deep(.el-table .top-8-row) {
-    background-color: rgba($primary-color, 0.1) !important;
+    background-color: rgba(0, 122, 255, 0.1) !important;
   }
 
   :deep(.el-table .top-8-row > td) {
-    background-color: rgba($primary-color, 0.1) !important;
+    background-color: rgba(0, 122, 255, 0.1) !important;
   }
 
   :deep(.el-table .top-8-row:hover) {
-    background-color: rgba($primary-color, 0.2) !important;
+    background-color: rgba(0, 122, 255, 0.15) !important;
   }
 
   :deep(.el-table .top-8-row:hover > td) {
-    background-color: rgba($primary-color, 0.2) !important;
+    background-color: rgba(0, 122, 255, 0.15) !important;
   }
 
-  // 响应式调整
-  @media (max-width: $breakpoint-tablet) {
+  /* 响应式调整 */
+  @media (max-width: 768px) {
     .strategy-container {
-      padding: 0 16px;
+      padding: 8px;
     }
 
     .page-header {
       flex-direction: column;
       align-items: flex-start;
-      gap: 16px;
+      gap: 12px;
+      padding: 10px 12px;
     }
 
     .header-right {
@@ -683,6 +750,16 @@
     .assets-input-group,
     .position-display {
       flex: 1;
+    }
+
+    .table-section {
+      padding: 8px;
+    }
+  }
+
+  @keyframes spin {
+    to {
+      transform: rotate(360deg);
     }
   }
 </style>

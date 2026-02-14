@@ -1,5 +1,6 @@
 <template>
   <div class="basedata-container">
+    <!-- 历史数据查询卡片 -->
     <Card shadow="never" class="main-card">
       <template #header>
         <div class="page-header">
@@ -10,27 +11,12 @@
         </div>
       </template>
 
-      <!-- 指数选择 -->
-      <div class="search-section">
-        <div class="search-label">选择指数:</div>
-        <RadioGroup v-model="selectedPlate" :disabled="loading" class="plate-radio-group">
-          <RadioButton
-            v-for="stock in stockList"
-            :key="stock.plate"
-            :label="stock.plate"
-            class="plate-radio"
-          >
-            {{ stock.plate }}
-          </RadioButton>
-        </RadioGroup>
-      </div>
-
       <Divider />
 
       <!-- 数据表格 -->
       <div v-loading="loading" class="table-section">
         <ElTable :data="paginatedData" border style="width: 100%" class="data-table">
-          <TableColumn prop="plate" label="名称" width="150" />
+          <TableColumn prop="plate" label="名称" width="140" />
           <TableColumn prop="date" label="日期" width="120" />
           <TableColumn label="交易形态" width="100">
             <template #default="{ row }">
@@ -79,27 +65,158 @@
         </div>
       </div>
     </Card>
+    <!-- 指数选择 -->
+    <div class="search-section">
+      <StockSelector
+        v-model="selectedStockIndex"
+        :stocks="stockList"
+        title="选择指数"
+        @stock-change="handleStockChange"
+      />
+    </div>
+    <!-- 回测分析结果 -->
+    <Card v-if="backtestResults.length > 0" shadow="never" class="backtest-card">
+      <template #header>
+        <div class="page-header">
+          <Icon class="header-icon">
+            <TrendCharts />
+          </Icon>
+          <span class="header-title">量化交易策略回测分析</span>
+        </div>
+      </template>
+
+      <!-- 策略汇总信息 -->
+      <div class="backtest-summary">
+        <ElRow :gutter="20">
+          <ElCol :span="12">
+            <div class="summary-item">
+              <div class="summary-label">信号驱动策略最终资产</div>
+              <div
+                class="summary-value"
+                :class="{
+                  positive: signalStrategyResult.totalReturn >= 0,
+                  negative: signalStrategyResult.totalReturn < 0,
+                }"
+              >
+                ¥{{ signalStrategyResult.finalAsset.toLocaleString() }}
+                <span class="return-rate"
+                  >({{ signalStrategyResult.totalReturn >= 0 ? '+' : ''
+                  }}{{ signalStrategyResult.totalReturn }}%)</span
+                >
+              </div>
+            </div>
+          </ElCol>
+          <ElCol :span="12">
+            <div class="summary-item">
+              <div class="summary-label">持有策略最终资产</div>
+              <div
+                class="summary-value"
+                :class="{
+                  positive: holdStrategyResult.totalReturn >= 0,
+                  negative: holdStrategyResult.totalReturn < 0,
+                }"
+              >
+                ¥{{ holdStrategyResult.finalAsset.toLocaleString() }}
+                <span class="return-rate"
+                  >({{ holdStrategyResult.totalReturn >= 0 ? '+' : ''
+                  }}{{ holdStrategyResult.totalReturn }}%)</span
+                >
+              </div>
+            </div>
+          </ElCol>
+        </ElRow>
+      </div>
+
+      <Divider />
+
+      <!-- 回测明细表格 -->
+      <ElTable
+        :data="backtestResults"
+        border
+        style="width: 100%"
+        class="backtest-table"
+        max-height="500"
+      >
+        <TableColumn prop="date" label="日期" width="120" />
+        <TableColumn prop="price" label="收盘价" width="120">
+          <template #default="{ row }">
+            {{ row.price.toFixed(2) }}
+          </template>
+        </TableColumn>
+        <TableColumn prop="signal" label="交易信号" width="100">
+          <template #default="{ row }">
+            <span :style="{ color: getSignalColor(row.signal) }">{{ row.signal }}</span>
+          </template>
+        </TableColumn>
+        <TableColumn prop="signalAction" label="信号策略操作" width="120">
+          <template #default="{ row }">
+            <ElTag v-if="row.signalAction === '买入'" type="danger" size="small">买入</ElTag>
+            <ElTag v-else-if="row.signalAction === '卖出'" type="success" size="small">卖出</ElTag>
+            <span v-else>-</span>
+          </template>
+        </TableColumn>
+        <TableColumn prop="signalStrategyAsset" label="信号驱动策略资产" width="160">
+          <template #default="{ row }">
+            {{
+              row.signalStrategyAsset.toLocaleString('zh-CN', {
+                minimumFractionDigits: 2,
+                maximumFractionDigits: 2,
+              })
+            }}
+          </template>
+        </TableColumn>
+        <TableColumn prop="holdAction" label="持有策略操作" width="120">
+          <template #default="{ row }">
+            <ElTag v-if="row.holdAction === '买入'" type="danger" size="small">买入</ElTag>
+            <ElTag v-else-if="row.holdAction === '卖出'" type="success" size="small">卖出</ElTag>
+            <span v-else>-</span>
+          </template>
+        </TableColumn>
+        <TableColumn prop="holdStrategyAsset" label="持有策略资产" width="160">
+          <template #default="{ row }">
+            {{
+              row.holdStrategyAsset.toLocaleString('zh-CN', {
+                minimumFractionDigits: 2,
+                maximumFractionDigits: 2,
+              })
+            }}
+          </template>
+        </TableColumn>
+      </ElTable>
+    </Card>
   </div>
 </template>
 
 <script setup>
   import { ref, computed, onMounted, watch } from 'vue'
-  import { DataLine } from '@element-plus/icons-vue'
+  import { DataLine, TrendCharts } from '@element-plus/icons-vue'
   import { useStockData } from '@/composables/useStockData'
   import { calculateShape, calculateTradingSignal } from '@/utils'
   import calculateJMA from '@/signalModule'
   import TradingSignal from '@/components/TradingSignal.vue'
+  import StockSelector from '@/components/StockSelector.vue'
+  import {
+    backtestSignalStrategy,
+    backtestHoldStrategy,
+    mergeBacktestResults,
+  } from '@/utils/backtest'
 
   // 组合式函数
   const { loading, stockData, fetchStockData } = useStockData()
 
   // 响应式数据
-  const selectedPlate = ref('')
+  const selectedStockIndex = ref(0)
   const currentPage = ref(1)
   const pageSize = 10
 
   // 计算属性
   const stockList = computed(() => stockData.value)
+  const selectedPlate = computed(() => {
+    if (stockData.value.length > 0 && selectedStockIndex.value >= 0) {
+      return stockData.value[selectedStockIndex.value]?.plate || ''
+    }
+    return ''
+  })
 
   // 表格数据
   const tableData = computed(() => {
@@ -112,9 +229,9 @@
     const priceArr = stockDataItem.priceArr
     const jmaArr = calculateJMA(priceArr)
 
-    // 映射数据，显示所有数据（最近200天）
-    const recent200Days = Math.min(200, stockDataItem.dateArr.length)
-    const startIndex = stockDataItem.dateArr.length - recent200Days
+    // 映射数据，显示所有数据（最近500天）
+    const recent500Days = Math.min(500, stockDataItem.dateArr.length)
+    const startIndex = stockDataItem.dateArr.length - recent500Days
 
     const result = stockDataItem.dateArr.slice(startIndex).map((date, sliceIndex) => {
       // sliceIndex 是在切片后的索引（0到199）
@@ -159,19 +276,85 @@
   // 总数据量
   const totalCount = computed(() => tableData.value.length)
 
+  // 回测结果
+  const backtestResults = ref([])
+  const signalStrategyResult = ref({ finalAsset: 0, totalReturn: 0 })
+  const holdStrategyResult = ref({ finalAsset: 0, totalReturn: 0 })
+
+  // 执行回测分析
+  const runBacktest = () => {
+    if (tableData.value.length === 0) {
+      backtestResults.value = []
+      return
+    }
+
+    // 准备回测数据（按日期从旧到新排序）
+    const backtestData = [...tableData.value]
+      .sort((a, b) => new Date(a.date) - new Date(b.date))
+      .map(item => ({
+        date: item.date,
+        price: item.price,
+        signal: item.signal,
+      }))
+
+    // 策略一：信号驱动策略
+    const signalResult = backtestSignalStrategy(backtestData, 1000000)
+    signalStrategyResult.value = {
+      finalAsset: signalResult.finalAsset,
+      totalReturn: signalResult.totalReturn,
+    }
+
+    // 策略二：持有策略
+    const holdResult = backtestHoldStrategy(backtestData, 1000000)
+    holdStrategyResult.value = {
+      finalAsset: holdResult.finalAsset,
+      totalReturn: holdResult.totalReturn,
+    }
+
+    // 合并结果用于表格展示
+    backtestResults.value = mergeBacktestResults(signalResult.results, holdResult.results).reverse() // 倒序显示（最新日期在前）
+  }
+
+  // 获取信号颜色
+  const getSignalColor = signal => {
+    const colorMap = {
+      买入: '#ff0000',
+      持有: '#ffa500',
+      卖出: '#00ff00',
+      空仓: '#0000ff',
+    }
+    return colorMap[signal] || '#999999'
+  }
+
   // 处理指数选择变化
-  const handlePlateChange = () => {
+  const handleStockChange = _index => {
     currentPage.value = 1
+    // 指数变化时重新执行回测
+    setTimeout(() => {
+      runBacktest()
+    }, 0)
   }
 
   // 监听指数变化
-  watch(selectedPlate, handlePlateChange)
+  watch(selectedPlate, () => {
+    currentPage.value = 1
+    runBacktest()
+  })
+
+  // 监听表格数据变化，重新执行回测
+  watch(
+    tableData,
+    () => {
+      runBacktest()
+    },
+    { deep: true },
+  )
 
   // 初始化
   const initialize = async () => {
     await fetchStockData()
     if (stockData.value.length > 0) {
-      selectedPlate.value = stockData.value[0].plate
+      selectedStockIndex.value = 0
     }
   }
 
@@ -187,116 +370,177 @@
   .basedata-container {
     max-width: 1400px;
     margin: 0 auto;
+    padding: 16px;
   }
 
-  .main-card {
-    border-radius: $border-radius-lg;
-    box-shadow: $shadow-md;
+  .main-card,
+  .backtest-card {
+    border: 1px solid #e0e0e0;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.08);
+    margin-bottom: 16px;
   }
 
   .page-header {
     display: flex;
     align-items: center;
     gap: 12px;
-    font-size: $font-size-xl;
-    font-weight: $font-weight-semibold;
-    color: $primary-color;
+    font-size: 18px;
+    font-weight: 600;
+    color: #007aff;
+    padding: 12px 16px;
+    border-bottom: 1px solid #e0e0e0;
   }
 
   .header-icon {
-    font-size: 24px;
+    font-size: 22px;
   }
 
   .header-title {
-    font-weight: $font-weight-bold;
+    font-weight: 700;
   }
 
   .search-section {
-    display: flex;
-    align-items: flex-start;
-    gap: 16px;
     margin-bottom: 16px;
-    flex-wrap: wrap;
   }
 
-  .search-label {
-    font-weight: $font-weight-medium;
-    color: $text-primary;
-    white-space: nowrap;
-    margin-top: 4px;
+  /* StockSelector组件样式调整 */
+  :deep(.stock-selector) {
+    border: 1px solid #e0e0e0;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.06);
   }
 
-  .plate-radio-group {
-    display: flex;
-    flex-wrap: wrap;
-    gap: $spacing-sm;
+  :deep(.selector-header) {
+    border-bottom: 1px solid #e0e0e0;
   }
 
-  .plate-radio {
-    margin-right: $spacing-md;
-    margin-bottom: $spacing-sm;
+  :deep(.selector-title) {
+    color: #007aff;
+    font-weight: 600;
+  }
 
-    :deep(.el-radio-button__inner) {
-      border-radius: $border-radius-md;
-      padding: $spacing-sm $spacing-md;
-      font-size: $font-size-sm;
-      transition: all $transition-fast;
+  :deep(.stock-item) {
+    border-radius: 0;
+    border: 1px solid #e0e0e0;
+    transition: all 0.2s ease;
 
-      &:hover {
-        border-color: $primary-color;
-        color: $primary-color;
-      }
+    &:hover {
+      border-color: #007aff;
+      color: #007aff;
     }
 
-    :deep(.el-radio-button__original-radio:checked + .el-radio-button__inner) {
-      background-color: $primary-color;
-      border-color: $primary-color;
-      color: $text-light;
+    &.active {
+      background-color: #007aff;
+      border-color: #007aff;
+      color: white;
     }
   }
 
   .table-section {
     min-height: 400px;
+    padding: 16px;
   }
 
-  .data-table {
-    border-radius: $border-radius-md;
-    box-shadow: $shadow-sm;
+  .data-table,
+  .backtest-table {
+    border: 1px solid #e0e0e0;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.06);
 
     :deep(.el-table__header th) {
-      background-color: $bg-tertiary;
-      font-weight: $font-weight-semibold;
+      background-color: #f5f5f5;
+      font-weight: 600;
+      border-bottom: 1px solid #e0e0e0;
+      padding: 10px 12px;
     }
 
     :deep(.el-table__row:hover) {
-      background-color: $bg-accent;
+      background-color: #f8f8f8;
     }
 
     :deep(.el-table__cell) {
-      padding: $spacing-sm $spacing-md;
+      padding: 10px 12px;
+      border-bottom: 1px solid #e0e0e0;
     }
   }
 
   .pagination-wrapper {
     display: flex;
     justify-content: flex-end;
-    margin-top: 20px;
+    margin-top: 16px;
+    padding: 12px 16px;
+    border-top: 1px solid #e0e0e0;
   }
 
   .data-pagination {
-    border-radius: $border-radius-md;
+    :deep(.el-pagination__item) {
+      border-radius: 0;
+    }
+  }
+
+  // 回测分析样式
+  .backtest-summary {
+    margin-bottom: 16px;
+    padding: 16px;
+    background-color: #f9f9f9;
+    border: 1px solid #e0e0e0;
+  }
+
+  .summary-item {
+    text-align: center;
+    padding: 16px;
+    background-color: white;
+    border: 1px solid #e0e0e0;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.06);
+  }
+
+  .summary-label {
+    font-size: 14px;
+    color: #666666;
+    margin-bottom: 8px;
+  }
+
+  .summary-value {
+    font-size: 18px;
+    font-weight: 700;
+
+    &.positive {
+      color: #ff3b30;
+    }
+
+    &.negative {
+      color: #34c759;
+    }
+  }
+
+  .return-rate {
+    font-size: 14px;
+    margin-left: 8px;
   }
 
   // 响应式调整
-  @media (max-width: $breakpoint-tablet) {
+  @media (max-width: 768px) {
     .basedata-container {
-      padding: 0 16px;
+      padding: 8px;
     }
 
     .search-section {
       flex-direction: column;
       align-items: flex-start;
-      gap: $spacing-sm;
+      gap: 8px;
+    }
+
+    .backtest-summary {
+      .el-row {
+        flex-direction: column;
+        gap: 12px;
+      }
+    }
+
+    .summary-item {
+      margin-bottom: 8px;
+    }
+
+    .table-section {
+      padding: 8px;
     }
   }
 </style>

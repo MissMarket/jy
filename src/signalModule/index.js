@@ -1,196 +1,221 @@
 /**
- * Jurik移动平均线（JMA）函数式实现
- * 基于Mark Jurik的研究和社区开源实现
+ * Jurik移动平均线（JMA）优化实现
+ * 基于Mark Jurik的研究和社区最佳实践
+ *
+ * 优化要点：
+ * 1. 使用滑动窗口计算波动性
+ * 2. 改进自适应因子计算
+ * 3. 添加预热期机制
+ * 4. 性能优化
+ * 5. 增强边界处理
+ * 6. 改进相位补偿
  */
 
-/**
- * 创建初始状态
- * @param {number} length - 周期长度
- * @param {number} phase - 相位参数
- * @param {number} power - 功率/自适应因子
- * @returns {Object} 初始状态对象
- */
-const createInitialState = (length, phase, power) => ({
-  init: false,
-  price: 0,
-  volty: 0,
-  vsum: 0,
-  ma1: 0,
-  ma2: 0,
-  ma3: 0,
-  ma4: 0,
-  ma5: 0,
-  ma6: 0,
-  ma7: 0,
-  ma8: 0,
-  ma9: 0,
-  length: Math.max(2, length),
-  phase: Math.max(-100, Math.min(100, phase)),
-  power: Math.max(1, Math.min(10, power)),
-})
+const EPSILON = 1e-10
 
-/**
- * 初始化状态
- * @param {Object} state - 当前状态
- * @param {number} initialPrice - 初始价格
- * @returns {Object} 初始化后的状态
- */
-const initializeState = (state, initialPrice) => ({
-  ...state,
-  price: initialPrice,
-  ma1: initialPrice,
-  ma2: initialPrice,
-  ma3: initialPrice,
-  ma4: initialPrice,
-  ma5: initialPrice,
-  ma6: initialPrice,
-  ma7: initialPrice,
-  ma8: initialPrice,
-  ma9: initialPrice,
-  vsum: 0,
-  volty: 0,
-  init: true,
-})
+const isValidNumber = value => {
+  return typeof value === 'number' && Number.isFinite(value) && !Number.isNaN(value)
+}
 
-/**
- * 计算单个JMA值
- * @param {Object} state - 当前状态
- * @param {number} price - 当前价格
- * @returns {Object} 包含新JMA值和更新后状态的对象
- */
+const clamp = (value, min, max) => {
+  return Math.max(min, Math.min(max, value))
+}
+
+const createCircularBuffer = size => {
+  const buffer = new Array(size).fill(0)
+  let index = 0
+  let count = 0
+  let sum = 0
+
+  return {
+    push: value => {
+      if (count >= size) {
+        sum -= buffer[index]
+      } else {
+        count++
+      }
+      buffer[index] = value
+      sum += value
+      index = (index + 1) % size
+    },
+    getAverage: () => {
+      return count > 0 ? sum / count : 0
+    },
+    getSum: () => sum,
+    getCount: () => count,
+    reset: () => {
+      buffer.fill(0)
+      index = 0
+      count = 0
+      sum = 0
+    },
+  }
+}
+
+const createInitialState = (length, phase, power) => {
+  const safeLength = Math.max(2, Math.floor(length))
+  const safePhase = clamp(phase, -100, 100)
+  const safePower = clamp(power, 1, 10)
+
+  return {
+    init: false,
+    warmupCount: 0,
+    warmupNeeded: Math.min(safeLength * 2, 50),
+    price: 0,
+    prevPrice: 0,
+    voltyBuffer: createCircularBuffer(safeLength),
+    del1: 0,
+    del2: 0,
+    avgDel: 0,
+    ma1: 0,
+    ma2: 0,
+    ma3: 0,
+    ma4: 0,
+    ma5: 0,
+    ma6: 0,
+    ma7: 0,
+    ma8: 0,
+    ma9: 0,
+    length: safeLength,
+    phase: safePhase,
+    power: safePower,
+  }
+}
+
+const initializeState = (state, initialPrice) => {
+  state.price = initialPrice
+  state.prevPrice = initialPrice
+  state.ma1 = initialPrice
+  state.ma2 = initialPrice
+  state.ma3 = initialPrice
+  state.ma4 = initialPrice
+  state.ma5 = initialPrice
+  state.ma6 = initialPrice
+  state.ma7 = initialPrice
+  state.ma8 = initialPrice
+  state.ma9 = initialPrice
+  state.del1 = 0
+  state.del2 = 0
+  state.avgDel = 0
+  state.voltyBuffer.reset()
+  state.warmupCount = 0
+  state.init = true
+  return state
+}
+
 const computeJMA = (state, price) => {
-  if (!state.init) {
-    const initializedState = initializeState(state, price)
+  if (!isValidNumber(price)) {
     return {
-      jma: price,
-      state: initializedState,
+      jma: state.init ? state.ma9 : 0,
+      state: state,
     }
   }
 
-  // 基础参数
+  if (!state.init) {
+    initializeState(state, price)
+    return {
+      jma: price,
+      state: state,
+    }
+  }
+
   const { length, phase, power } = state
-  const phaseRatio = phase / 100.0
 
-  // 更新价格状态
   const prevPrice = state.price
+  state.prevPrice = prevPrice
+  state.price = price
 
-  // 计算波动性和累积波动
-  const priceChange = Math.abs(price - prevPrice)
-  const volty = priceChange
-  const vsum = state.vsum + volty
+  const priceChange = price - prevPrice
+  const absChange = Math.abs(priceChange)
 
-  // 计算自适应因子
-  const avgVolty = vsum / length
-  const voltyRatio = avgVolty > 0 ? volty / avgVolty : 1
+  state.voltyBuffer.push(absChange)
+  const avgVolty = state.voltyBuffer.getAverage()
 
-  // 自适应指数 - 核心机制
-  const adaptivePower = power * voltyRatio
-  const adaptiveFactor = Math.pow(adaptivePower, 2)
-  const clampedFactor = Math.max(0.5, Math.min(2.0, adaptiveFactor))
+  const voltyRatio = avgVolty > EPSILON ? absChange / avgVolty : 1
 
-  // 计算滤波系数
-  const effectiveLen = length * clampedFactor
-  const phaseRatio2 = phaseRatio + 1.0
+  const logRatio = voltyRatio > EPSILON ? Math.log(voltyRatio + 1) : 0
+  const adaptivePower = power * (1 + logRatio * 0.5)
+  const adaptiveFactor = clamp(adaptivePower, 0.5, 2.0)
+
+  const effectiveLen = Math.max(2, length * adaptiveFactor)
   const beta = (0.45 * (effectiveLen - 1)) / (0.45 * (effectiveLen - 1) + 2)
   const alpha = beta
 
-  // Jurik级联滤波（标准实现）
-  // EMA1
-  const ma1 = (1 - alpha) * state.ma1 + alpha * price
+  const phaseRatio = phase / 100.0
+  const phaseCoeff = clamp(1.0 + phaseRatio, 0.1, 2.0)
 
-  // EMA2
+  const ma1 = (1 - alpha) * state.ma1 + alpha * price
   const ma2 = (1 - alpha) * state.ma2 + alpha * ma1
 
-  // EMA3 - 带相位补偿
-  const ma1Diff = ma1 - ma2
-  const ma3 = (1 - alpha) * state.ma3 + alpha * (ma1 + ma1Diff * phaseRatio2)
+  const del1 = ma1 - ma2
+  state.del1 = del1
 
-  // EMA4
+  const ma3 = (1 - alpha) * state.ma3 + alpha * (ma1 + del1 * phaseCoeff)
   const ma4 = (1 - alpha) * state.ma4 + alpha * ma3
 
-  // EMA5 - 带相位补偿
-  const ma3Diff = ma3 - ma4
-  const ma5 = (1 - alpha) * state.ma5 + alpha * (ma3 + ma3Diff * phaseRatio2)
+  const del2 = ma3 - ma4
+  state.del2 = del2
+  state.avgDel = (state.avgDel + del2) * 0.5
 
-  // EMA6
+  const ma5 = (1 - alpha) * state.ma5 + alpha * (ma3 + del2 * phaseCoeff)
   const ma6 = (1 - alpha) * state.ma6 + alpha * ma5
 
-  // EMA7 - 带相位补偿
-  const ma5Diff = ma5 - ma6
-  const ma7 = (1 - alpha) * state.ma7 + alpha * (ma5 + ma5Diff * phaseRatio2)
-
-  // EMA8
+  const del3 = ma5 - ma6
+  const ma7 = (1 - alpha) * state.ma7 + alpha * (ma5 + del3 * phaseCoeff)
   const ma8 = (1 - alpha) * state.ma8 + alpha * ma7
 
-  // EMA9 - 带相位补偿
-  const ma7Diff = ma7 - ma8
-  const ma9 = (1 - alpha) * state.ma9 + alpha * (ma7 + ma7Diff * phaseRatio2)
+  const del4 = ma7 - ma8
+  const ma9 = (1 - alpha) * state.ma9 + alpha * (ma7 + del4 * phaseCoeff)
 
-  // 最终输出 - Jurik的关键：多级滤波后提取信号
-  const finalJMA = ma9
+  state.ma1 = ma1
+  state.ma2 = ma2
+  state.ma3 = ma3
+  state.ma4 = ma4
+  state.ma5 = ma5
+  state.ma6 = ma6
+  state.ma7 = ma7
+  state.ma8 = ma8
+  state.ma9 = ma9
 
-  const newState = {
-    ...state,
-    price,
-    volty,
-    vsum,
-    ma1,
-    ma2,
-    ma3,
-    ma4,
-    ma5,
-    ma6,
-    ma7,
-    ma8,
-    ma9,
+  state.warmupCount++
+
+  let finalJMA = ma9
+  if (state.warmupCount < state.warmupNeeded) {
+    const warmupProgress = state.warmupCount / state.warmupNeeded
+    const warmupFactor = Math.pow(warmupProgress, 2)
+    finalJMA = price * (1 - warmupFactor) + ma9 * warmupFactor
   }
 
   return {
     jma: finalJMA,
-    state: newState,
+    state: state,
   }
 }
 
-/**
- * 批量计算JMA
- * @param {Object} state - 初始状态
- * @param {Array} prices - 价格数组
- * @returns {Object} 包含JMA值数组和最终状态的对象
- */
-const calculateBatchJMA = (state, prices) => {
-  const results = []
-  let currentState = state
-
-  for (const price of prices) {
-    const { jma } = computeJMA(currentState, price)
-    results.push(jma)
-    currentState = computeJMA(currentState, price).state
-  }
-
-  return {
-    jmaValues: results,
-    finalState: currentState,
-  }
-}
-
-/**
- * 计算JMA主函数
- * @param {Array} prices - 价格数组
- * @param {number} period - 周期（默认10）
- * @param {number} phase - 相位（默认0）
- * @param {number} power - 功率（默认1）
- * @returns {Array} JMA值数组
- */
-const calculateJMA = (prices, period = 10, phase = 0, power = 1.5) => {
+const calculateJMA = (prices, period = 10, phase = 0, power = 2) => {
   if (!Array.isArray(prices) || prices.length === 0) {
     return []
   }
 
-  const initialState = createInitialState(period, phase, power)
-  const { jmaValues } = calculateBatchJMA(initialState, prices)
+  const validPrices = prices.filter(isValidNumber)
+  if (validPrices.length === 0) {
+    return []
+  }
 
-  return jmaValues
+  const state = createInitialState(period, phase, power)
+  const results = new Array(prices.length)
+
+  for (let i = 0; i < prices.length; i++) {
+    const price = prices[i]
+    if (isValidNumber(price)) {
+      const result = computeJMA(state, price)
+      results[i] = result.jma
+    } else {
+      results[i] = state.init ? state.ma9 : results[i - 1] || 0
+    }
+  }
+
+  return results
 }
 
-// 导出模块
 export default calculateJMA

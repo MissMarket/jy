@@ -10,56 +10,57 @@
         </div>
       </template>
 
-      <Card v-if="loading" style="margin-top: 20px" class="loading-card">
-        <Skeleton :rows="5" animated />
-      </Card>
+      <div v-if="loading" class="loading-section">
+        <div class="loading-spinner" />
+        <p class="loading-text">正在加载数据...</p>
+      </div>
 
-      <Space v-else direction="vertical" style="width: 100%" :size="20">
+      <div v-else class="content-section">
         <!-- 股票选择器 -->
-        <StockSelector
-          v-model="selectedStockIndex"
-          :stocks="stocks"
-          title="选择股票"
-          @stock-change="handleStockChange"
-        />
+        <div class="selector-section">
+          <StockSelector
+            v-model="selectedStockIndex"
+            :stocks="stocks"
+            title="选择股票"
+            @stock-change="handleStockChange"
+          />
+        </div>
 
         <!-- 策略对比 -->
-        <Card class="comparison-card">
-          <template #header>
-            <div class="card-header">
-              <span>策略对比 - {{ currentStock?.plate }}</span>
-            </div>
-          </template>
-          <Alert
-            :title="backtestResult.comparison?.comparison"
-            :type="backtestResult.comparison?.winner === '交易策略' ? 'success' : 'warning'"
-            :closable="false"
-            show-icon
-            class="comparison-alert"
-          />
-        </Card>
+        <div class="comparison-section">
+          <div class="section-header">
+            <span>策略对比 - {{ currentStock?.plate }}</span>
+          </div>
+          <div class="comparison-content">
+            <Alert
+              :title="backtestResult.comparison?.comparison"
+              :type="backtestResult.comparison?.winner === '交易策略' ? 'success' : 'warning'"
+              :closable="false"
+              show-icon
+            />
+          </div>
+        </div>
 
         <!-- 策略结果 -->
-        <Row :gutter="20">
+        <Row :gutter="16">
           <ElCol :span="12">
-            <StrategyResult
-              :strategy="backtestResult.strategy"
-              :hold="null"
-              :comparison="null"
-              strategy-title="交易策略（JMA信号）"
-            />
+            <div class="strategy-card">
+              <StrategyResult
+                :strategy="backtestResult.strategy"
+                :hold="null"
+                :comparison="null"
+                strategy-title="交易策略（JMA信号）"
+              />
+            </div>
 
             <!-- 交易明细 -->
-            <Card v-if="backtestResult.strategy" class="trades-card">
-              <template #header>
-                <div class="card-header">
-                  <span>交易明细</span>
-                </div>
-              </template>
+            <div v-if="backtestResult.strategy" class="trades-section">
+              <div class="section-header">
+                <span>交易明细</span>
+              </div>
               <ElTable
                 :data="backtestResult.strategy?.trades || []"
                 border
-                stripe
                 max-height="400"
                 style="width: 100%"
                 class="trades-table"
@@ -77,19 +78,21 @@
                 <TableColumn prop="position" label="持仓" width="100" />
                 <TableColumn prop="signal" label="信号" />
               </ElTable>
-            </Card>
+            </div>
           </ElCol>
 
           <ElCol :span="12">
-            <StrategyResult
-              :strategy="null"
-              :hold="backtestResult.hold"
-              :comparison="null"
-              hold-title="买入持有策略"
-            />
+            <div class="strategy-card">
+              <StrategyResult
+                :strategy="null"
+                :hold="backtestResult.hold"
+                :comparison="null"
+                hold-title="买入持有策略"
+              />
+            </div>
           </ElCol>
         </Row>
-      </Space>
+      </div>
     </Card>
   </div>
 </template>
@@ -147,75 +150,138 @@
   .backtest-container {
     max-width: 1400px;
     margin: 0 auto;
+    padding: 16px;
   }
 
   .main-card {
-    border-radius: $border-radius-lg;
-    box-shadow: $shadow-md;
+    border: 1px solid #e0e0e0;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.08);
   }
 
   .page-header {
     display: flex;
     align-items: center;
     gap: 12px;
-    font-size: $font-size-xl;
-    font-weight: $font-weight-semibold;
-    color: $primary-color;
+    font-size: 18px;
+    font-weight: 600;
+    color: #007aff;
+    padding: 12px 16px;
+    border-bottom: 1px solid #e0e0e0;
   }
 
   .header-icon {
-    font-size: 24px;
+    font-size: 22px;
   }
 
   .header-title {
-    font-weight: $font-weight-bold;
+    font-weight: 700;
   }
 
-  .loading-card {
-    border-radius: $border-radius-md;
-    box-shadow: $shadow-sm;
+  .loading-section {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 60px 20px;
   }
 
-  .comparison-card {
-    border-radius: $border-radius-md;
-    box-shadow: $shadow-sm;
+  .loading-spinner {
+    width: 32px;
+    height: 32px;
+    border: 3px solid rgba(0, 122, 255, 0.2);
+    border-top-color: #007aff;
+    border-right-color: #007aff;
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+    margin-bottom: 12px;
   }
 
-  .comparison-alert {
-    border-radius: $border-radius-sm;
+  .loading-text {
+    color: #666666;
+    font-size: 14px;
   }
 
-  .trades-card {
-    margin-top: 20px;
-    border-radius: $border-radius-md;
-    box-shadow: $shadow-sm;
+  .content-section {
+    padding: 16px;
+  }
+
+  .selector-section {
+    margin-bottom: 16px;
+  }
+
+  .comparison-section {
+    margin-bottom: 16px;
+    border: 1px solid #e0e0e0;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.06);
+  }
+
+  .section-header {
+    display: flex;
+    align-items: center;
+    font-weight: 600;
+    color: #333333;
+    padding: 12px 16px;
+    border-bottom: 1px solid #e0e0e0;
+    background-color: #f9f9f9;
+  }
+
+  .comparison-content {
+    padding: 16px;
+  }
+
+  .strategy-card {
+    border: 1px solid #e0e0e0;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.06);
+    margin-bottom: 16px;
+  }
+
+  .trades-section {
+    border: 1px solid #e0e0e0;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.06);
   }
 
   .trades-table {
-    border-radius: $border-radius-sm;
+    border: 1px solid #e0e0e0;
 
     :deep(.el-table__header th) {
-      background-color: $bg-tertiary;
-      font-weight: $font-weight-semibold;
+      background-color: #f5f5f5;
+      font-weight: 600;
+      border-bottom: 1px solid #e0e0e0;
+      padding: 10px 12px;
     }
 
     :deep(.el-table__row:hover) {
-      background-color: $bg-accent;
+      background-color: #f8f8f8;
+    }
+
+    :deep(.el-table__cell) {
+      padding: 10px 12px;
+      border-bottom: 1px solid #e0e0e0;
     }
   }
 
-  .card-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    font-weight: $font-weight-semibold;
-    color: $text-primary;
+  // 响应式调整
+  @media (max-width: 768px) {
+    .backtest-container {
+      padding: 8px;
+    }
+
+    .content-section {
+      padding: 8px;
+    }
+
+    .comparison-content {
+      padding: 12px;
+    }
+
+    .section-header {
+      padding: 10px 12px;
+    }
   }
 
-  // 响应式调整
-  @media (max-width: $breakpoint-tablet) {
-    .backtest-container {
-      padding: 0 16px;
+  @keyframes spin {
+    to {
+      transform: rotate(360deg);
     }
   }
 </style>

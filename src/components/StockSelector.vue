@@ -4,16 +4,15 @@
       <h3 class="selector-title">{{ title }}</h3>
     </div>
     <div class="selector-body">
-      <RadioGroup v-model="selectedStockIndex" @change="handleStockChange">
-        <RadioButton
-          v-for="(stock, index) in stocks"
-          :key="index"
-          :label="index"
-          class="stock-radio"
-        >
-          {{ stock.plate || `股票 ${index + 1}` }}
-        </RadioButton>
-      </RadioGroup>
+      <div
+        v-for="(stock, index) in stocks"
+        :key="index"
+        class="stock-item"
+        :class="{ active: selectedStockIndex === index }"
+        @click="handleStockChange(index)"
+      >
+        {{ stock.plate || `股票 ${index + 1}` }}
+      </div>
     </div>
   </div>
 </template>
@@ -86,26 +85,24 @@
   .selector-body {
     display: flex;
     flex-wrap: wrap;
-    gap: $spacing-sm;
+    width: 100%;
   }
 
-  .stock-radio {
-    margin-right: $spacing-md;
-    margin-bottom: $spacing-sm;
+  .stock-item {
+    width: 10%;
+    text-align: center;
+    padding: $spacing-sm 0;
+    cursor: pointer;
+    transition: all $transition-fast;
+    border: 1px solid $border-color;
+    box-sizing: border-box;
 
-    :deep(.el-radio-button__inner) {
-      border-radius: $border-radius-md;
-      padding: $spacing-sm $spacing-md;
-      font-size: $font-size-sm;
-      transition: all $transition-fast;
-
-      &:hover {
-        border-color: $primary-color;
-        color: $primary-color;
-      }
+    &:hover {
+      border-color: $primary-color;
+      color: $primary-color;
     }
 
-    :deep(.el-radio-button__original-radio:checked + .el-radio-button__inner) {
+    &.active {
       background-color: $primary-color;
       border-color: $primary-color;
       color: $text-light;
@@ -114,19 +111,8 @@
 
   // 响应式调整
   @media (max-width: $breakpoint-mobile) {
-    .selector-body {
-      flex-direction: column;
-      gap: $spacing-xs;
-    }
-
-    .stock-radio {
-      margin-right: 0;
-      margin-bottom: $spacing-xs;
-
-      :deep(.el-radio-button__inner) {
-        width: 100%;
-        text-align: center;
-      }
+    .stock-item {
+      width: 20%;
     }
   }
 </style>

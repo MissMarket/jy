@@ -8,6 +8,10 @@
   <Container v-else class="layout-container">
     <ElAside :width="sidebarWidth" class="layout-aside">
       <ElMenu :default-active="activeMenu" class="layout-menu" @select="handleMenuSelect">
+        <MenuItem index="strategy">
+          <Icon><TrendCharts /></Icon>
+          <span>交易策略评估</span>
+        </MenuItem>
         <MenuItem index="home">
           <Icon><Histogram /></Icon>
           <span>交易策略回测</span>
@@ -15,10 +19,6 @@
         <MenuItem index="basedata">
           <Icon><DataLine /></Icon>
           <span>历史数据查询</span>
-        </MenuItem>
-        <MenuItem index="strategy">
-          <Icon><TrendCharts /></Icon>
-          <span>交易策略评估</span>
         </MenuItem>
       </ElMenu>
     </ElAside>
@@ -48,7 +48,7 @@
   })
 
   // 导航状态
-  const activeMenu = ref('home')
+  const activeMenu = ref('strategy')
   const currentComponent = shallowRef(Home)
 
   // 组件映射
@@ -70,7 +70,7 @@
 
   .mobile-app {
     min-height: 100vh;
-    background-color: $bg-primary;
+    background-color: #f2f2f7;
   }
 
   .layout-container {
@@ -78,43 +78,48 @@
   }
 
   .layout-aside {
-    background: linear-gradient(180deg, $primary-color 0%, $secondary-color 100%);
-    overflow-x: hidden;
-    box-shadow: $shadow-md;
+    background-color: #ffffff;
+    overflow: hidden;
+    border-right: 1px solid #e0e0e0;
   }
 
   .layout-menu {
     border-right: none;
-    height: 100%;
     background: transparent;
+    padding: 16px 0;
   }
 
   .layout-menu :deep(.el-menu-item) {
-    color: rgba(255, 255, 255, 0.9);
-    margin: 8px 12px;
-    border-radius: $border-radius-md;
-    transition: all $transition-fast;
+    color: #333333;
+    margin: 0 12px 8px 12px;
+    border-radius: 0;
+    transition: all 0.2s ease;
+    padding: 12px 16px;
+    border: 1px solid transparent;
+    font-size: 14px;
+    font-weight: 500;
   }
 
   .layout-menu :deep(.el-menu-item:hover) {
-    background-color: rgba(255, 255, 255, 0.2);
-    color: #fff;
-    transform: translateX(4px);
+    background-color: #f5f5f5;
+    color: #007aff;
+    border-color: #007aff;
   }
 
   .layout-menu :deep(.el-menu-item.is-active) {
-    background-color: rgba(255, 255, 255, 0.3);
-    color: #fff;
-    font-weight: $font-weight-medium;
+    background-color: #007aff;
+    color: #ffffff;
+    font-weight: 600;
+    border-color: #007aff;
   }
 
   .layout-menu :deep(.el-menu-item .el-icon) {
-    margin-right: 12px;
+    margin-right: 10px;
     font-size: 18px;
   }
 
   .layout-main {
-    background-color: $bg-primary;
+    background-color: #f2f2f7;
     height: 100vh;
     overflow-y: auto;
   }

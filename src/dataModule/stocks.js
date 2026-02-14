@@ -18,7 +18,7 @@ export default [
     fund: '天弘中证农业主题指数C',
   },
   {
-    plate: '国防军工',
+    plate: '军工',
     stock: '中证军工',
     id: 'SZ399967',
     fund: '广发中证军工ETF联接C',
@@ -48,7 +48,7 @@ export default [
     fund: '华宝中证细分食品饮料ETF联接C',
   },
   {
-    plate: '半导体',
+    plate: '半导',
     stock: '芯片ETF',
     id: 'SH516920',
     fund: '天弘中证芯片产业指数C',
@@ -66,31 +66,31 @@ export default [
     fund: '天弘国证生物医药指数C',
   },
   {
-    plate: '恒生科技',
+    plate: '恒生',
     stock: '恒生科技30ETF',
     id: 'SH513010',
     fund: '华安恒生科技指数C',
   },
   {
-    plate: '新能源',
+    plate: '新能',
     stock: 'CS新能车',
     id: 'SZ399976',
     fund: '天弘中证新能源车C',
   },
   {
-    plate: '家用电器',
+    plate: '家电',
     stock: '龙头家电ETF',
     id: 'SZ159730',
     fund: '天弘国证龙头家电指数C',
   },
   {
-    plate: '人工智能',
+    plate: '人工',
     stock: '人工智能ETF',
     id: 'SZ159819',
     fund: '易方达中证人工智能主题ETF联接C',
   },
   {
-    plate: '创业板50',
+    plate: '创业',
     stock: '创业板50',
     id: 'SZ399673',
     fund: '易方达创业板50ETF联接C',
@@ -102,7 +102,7 @@ export default [
     fund: '鹏华中证中药ETF联接C',
   },
   {
-    plate: '纳斯达克',
+    plate: '纳指',
     stock: '纳指ETF',
     id: 'SZ159941',
     fund: '华安纳斯达克100指数C',

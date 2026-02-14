@@ -42,39 +42,31 @@
       <div v-else class="results-section">
         <div class="section-title">策略评估结果</div>
 
-        <!-- 移动端卡片式列表 -->
-        <div class="stock-cards">
+        <!-- 移动端列表 -->
+        <div class="stock-list">
           <div
             v-for="(stock, index) in evaluationResults"
             :key="index"
-            class="stock-card"
+            class="stock-item"
             :class="{ 'top-8': index < 8 }"
           >
-            <div class="card-body">
-              <!-- 只显示名称、信号、分配资金，key-value在同一行 -->
-              <div class="simple-grid">
-                <div class="simple-row">
-                  <span class="simple-key">名称</span>
-                  <span class="simple-value name">{{ stock.name }}</span>
-                </div>
-                <div class="simple-row">
-                  <span class="simple-key">信号</span>
-                  <span class="simple-value" :style="{ color: stock.tradingSignal.color }">
-                    {{ stock.tradingSignal.signal }}
-                  </span>
-                </div>
-                <div class="simple-row">
-                  <span class="simple-key">分配资金</span>
-                  <span
-                    v-if="stock.allocation > 0"
-                    class="simple-value allocation"
-                    :class="stock.tradingShape.shape === '低点' ? 'success' : 'warning'"
-                  >
-                    {{ stock.allocation.toLocaleString() }} 元
-                  </span>
-                  <span v-else class="simple-value">-</span>
-                </div>
-              </div>
+            <!-- 只显示名称、信号、分配资金，key-value在同一行 -->
+            <div class="item-row">
+              <span class="item-label">{{ stock.name }}</span>
+              <span class="item-value" :style="{ color: stock.tradingSignal.color }">
+                {{ stock.tradingSignal.signal }}
+              </span>
+            </div>
+            <div class="item-row">
+              <span class="item-label">资金</span>
+              <span
+                v-if="stock.allocation > 0"
+                class="item-value allocation"
+                :class="stock.tradingShape.shape === '低点' ? 'success' : 'warning'"
+              >
+                {{ stock.allocation.toLocaleString() }} 元
+              </span>
+              <span v-else class="item-value">-</span>
             </div>
           </div>
         </div>
@@ -178,20 +170,20 @@
 
   .mobile-strategy-container {
     min-height: 100vh;
-    background-color: $bg-primary;
+    background-color: #f2f2f7;
     display: flex;
     flex-direction: column;
   }
 
   .mobile-header {
-    background: linear-gradient(135deg, #1677ff 0%, #4096ff 50%, #1677ff 100%);
+    background-color: #007aff;
     color: #ffffff;
     padding: 12px 16px;
-    box-shadow: 0 4px 20px rgba(22, 119, 255, 0.4);
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
     position: sticky;
     top: 0;
     z-index: 100;
-    border-bottom: 2px solid rgba(255, 255, 255, 0.2);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.2);
   }
 
   .header-content {
@@ -202,8 +194,8 @@
   }
 
   .header-title {
-    font-size: $font-size-xl;
-    font-weight: $font-weight-bold;
+    font-size: 18px;
+    font-weight: 700;
     margin: 0;
   }
 
@@ -211,9 +203,8 @@
     font-size: 13px;
     color: rgba(255, 255, 255, 0.95);
     font-weight: 500;
-    padding: 3px 10px;
+    padding: 4px 10px;
     background: rgba(255, 255, 255, 0.2);
-    border-radius: 12px;
     border: 1px solid rgba(255, 255, 255, 0.3);
   }
 
@@ -224,74 +215,71 @@
   }
 
   .assets-section {
-    background-color: $bg-secondary;
-    border-radius: $border-radius-md;
+    background-color: #ffffff;
+    border: 1px solid #e0e0e0;
     padding: 12px;
-    margin-bottom: 16px;
-    box-shadow: $shadow-sm;
+    margin-bottom: 12px;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.06);
   }
 
   .section-title {
-    font-size: $font-size-base;
-    font-weight: $font-weight-bold;
-    color: #1677ff;
+    font-size: 16px;
+    font-weight: 600;
+    color: #007aff;
     margin-bottom: 8px;
     padding-bottom: 6px;
-    border-bottom: 2px solid #1677ff;
-    text-shadow: 0 0 8px rgba(22, 119, 255, 0.3);
+    border-bottom: 1px solid #e0e0e0;
   }
 
   .assets-input-group {
     display: flex;
     align-items: center;
-    gap: 6px;
+    gap: 8px;
     margin-bottom: 10px;
   }
 
   .label {
-    font-size: $font-size-xs;
-    color: $text-secondary;
+    font-size: 14px;
+    color: #666666;
     white-space: nowrap;
   }
 
   .assets-input {
     flex: 1;
-    padding: 6px 10px;
-    border: 2px solid rgba(22, 119, 255, 0.3);
-    border-radius: 8px;
-    font-size: $font-size-sm;
-    color: #1677ff;
+    padding: 8px 12px;
+    border: 1px solid #d0d0d0;
+    font-size: 14px;
+    color: #007aff;
     background-color: #ffffff;
     font-weight: 600;
-    transition: all 0.3s ease;
+    transition: all 0.2s ease;
   }
 
   .assets-input:focus {
     outline: none;
-    border-color: #1677ff;
-    box-shadow: 0 0 8px rgba(22, 119, 255, 0.4);
+    border-color: #007aff;
+    box-shadow: 0 0 0 2px rgba(0, 122, 255, 0.2);
   }
 
   .unit {
-    font-size: $font-size-xs;
-    color: $text-secondary;
+    font-size: 14px;
+    color: #666666;
   }
 
   .position-display {
     display: flex;
     align-items: center;
-    gap: 6px;
+    gap: 8px;
     margin-top: 6px;
   }
 
   .position-tag {
-    background: linear-gradient(135deg, #1677ff 0%, #4096ff 100%);
+    background-color: #007aff;
     color: #ffffff;
     padding: 4px 12px;
-    border-radius: 20px;
-    font-size: $font-size-xs;
-    font-weight: $font-weight-bold;
-    box-shadow: 0 2px 8px rgba(22, 119, 255, 0.4);
+    font-size: 14px;
+    font-weight: 600;
+    box-shadow: 0 1px 2px rgba(0, 122, 255, 0.3);
   }
 
   .loading-section {
@@ -303,129 +291,90 @@
   }
 
   .loading-spinner {
-    width: 36px;
-    height: 36px;
-    border: 3px solid rgba(22, 119, 255, 0.2);
-    border-top-color: #1677ff;
-    border-right-color: #4096ff;
+    width: 32px;
+    height: 32px;
+    border: 3px solid rgba(0, 122, 255, 0.2);
+    border-top-color: #007aff;
+    border-right-color: #007aff;
     border-radius: 50%;
     animation: spin 0.8s linear infinite;
     margin-bottom: 12px;
-    box-shadow: 0 0 10px rgba(22, 119, 255, 0.3);
   }
 
   .loading-text {
-    color: $text-secondary;
-    font-size: $font-size-sm;
+    color: #666666;
+    font-size: 14px;
   }
 
   .results-section {
-    background-color: $bg-secondary;
-    border-radius: $border-radius-md;
+    background-color: #ffffff;
+    border: 1px solid #e0e0e0;
     padding: 12px;
-    box-shadow: $shadow-sm;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.06);
   }
 
-  .stock-cards {
+  .stock-list {
     display: flex;
     flex-direction: column;
-    gap: 10px;
+    gap: 8px;
   }
 
-  .stock-card {
-    background: linear-gradient(145deg, #ffffff 0%, #f0f7ff 100%);
-    border-radius: 12px;
-    padding: 8px;
-    box-shadow: 0 2px 12px rgba(22, 119, 255, 0.1);
-    transition: all 0.3s ease;
-    border: 1px solid rgba(22, 119, 255, 0.15);
+  .stock-item {
+    background-color: #f9f9f9;
+    border: 1px solid #e0e0e0;
+    padding: 10px;
+    transition: all 0.2s ease;
   }
 
-  .stock-card:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 4px 20px rgba(22, 119, 255, 0.25);
-    border-color: rgba(22, 119, 255, 0.3);
+  .stock-item:hover {
+    background-color: #f0f7ff;
+    border-color: #007aff;
   }
 
-  .stock-card.top-8 {
-    border: 2px solid #1677ff;
-    background: linear-gradient(145deg, #ffffff 0%, #e6f2ff 100%);
-    box-shadow:
-      0 0 15px rgba(22, 119, 255, 0.3),
-      0 2px 12px rgba(22, 119, 255, 0.15);
+  .stock-item.top-8 {
+    border: 1px solid #007aff;
+    background-color: #f0f7ff;
+    box-shadow: 0 1px 2px rgba(0, 122, 255, 0.2);
   }
 
-  .card-header {
-    display: none;
-  }
-
-  .card-body {
-    padding: 0;
-  }
-
-  /* 简化布局 - 3行，key-value在同一行 */
-  .simple-grid {
-    display: flex;
-    flex-direction: column;
-    gap: 6px;
-  }
-
-  .simple-row {
+  .item-row {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    padding: 6px 8px;
-    background: rgba(22, 119, 255, 0.05);
-    border-radius: 6px;
-    border: 1px solid rgba(22, 119, 255, 0.1);
+    padding: 6px 0;
   }
 
-  .simple-key {
-    font-size: 12px;
-    color: #1677ff;
+  .item-row:last-child {
+    border-bottom: none;
+  }
+
+  .item-label {
+    font-size: 14px;
+    color: #666666;
+    font-weight: 500;
+  }
+
+  .item-value {
+    font-size: 14px;
     font-weight: 600;
-    opacity: 0.85;
+    color: #333333;
   }
 
-  .simple-value {
-    font-size: 13px;
-    font-weight: 700;
-    color: #1a1a1a;
-  }
-
-  .simple-value.name {
-    color: #1677ff;
+  .item-value.name {
+    color: #007aff;
     font-weight: 700;
   }
 
-  .simple-value.allocation {
+  .item-value.allocation {
     font-weight: 700;
   }
 
-  .simple-value.allocation.success {
-    color: #52c41a;
+  .item-value.allocation.success {
+    color: #34c759;
   }
 
-  .simple-value.allocation.warning {
-    color: #fa8c16;
-  }
-
-  /* 旧样式清理 */
-  .card-date,
-  .kv-grid,
-  .kv-row,
-  .kv-item,
-  .kv-key,
-  .kv-value,
-  .signal-section,
-  .allocation-section,
-  .signal-item,
-  .allocation-item,
-  .signal-value,
-  .allocation-label,
-  .allocation-value,
-  .allocation-tag {
-    display: none;
+  .item-value.allocation.warning {
+    color: #ff9500;
   }
 
   @keyframes spin {
@@ -445,16 +394,16 @@
       padding: 10px;
     }
 
-    .simple-row {
-      padding: 5px 6px;
+    .item-row {
+      padding: 5px 0;
     }
 
-    .simple-key {
-      font-size: 11px;
+    .item-label {
+      font-size: 13px;
     }
 
-    .simple-value {
-      font-size: 12px;
+    .item-value {
+      font-size: 13px;
     }
   }
 </style>
