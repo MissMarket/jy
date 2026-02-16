@@ -111,12 +111,13 @@
     }
   }
 
-  // 计算当前仓位
+  // 计算当前仓位（买入或持有的分配资金之和）
   const currentPosition = computed(() => {
     return evaluationResults.value.reduce((sum, stock) => {
+      // 只有买入和持有才计入仓位
       if (
         stock.allocation > 0 &&
-        (stock.tradingShape?.shape === '低点' || stock.tradingShape?.shape === '上升')
+        (stock.tradingSignal?.signal === '买入' || stock.tradingSignal?.signal === '持有')
       ) {
         return sum + stock.allocation
       }
