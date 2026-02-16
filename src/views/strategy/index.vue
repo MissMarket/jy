@@ -41,10 +41,10 @@
   // 计算当前仓位（买入或持有的分配资金之和）
   const currentPosition = computed(() => {
     return evaluationResults.value.reduce((sum, stock) => {
-      // 只有低点或上升形态才计入仓位
+      // 只有买入和持有才计入仓位
       if (
         stock.allocation > 0 &&
-        (stock.tradingShape?.shape === '低点' || stock.tradingShape?.shape === '上升')
+        (stock.tradingSignal?.signal === '买入' || stock.tradingSignal?.signal === '持有')
       ) {
         return sum + stock.allocation
       }
@@ -69,12 +69,12 @@
     saveTotalAssetsToStorage()
 
     evaluationResults.value.forEach((stock, index) => {
-      // 只有前8名且有低点/上升形态才分配资金
-      const shape = stock.tradingShape?.shape
-      const isValidShape = shape === '低点' || shape === '上升'
+      // 只有前8名且有买入/持有信号才分配资金
+      const signal = stock.tradingSignal?.signal
+      const isValidSignal = signal === '买入' || signal === '持有'
       const isTop8 = index < 8
 
-      if (isTop8 && isValidShape && stock.weight > 0) {
+      if (isTop8 && isValidSignal && stock.weight > 0) {
         stock.allocation = Math.floor((assets * stock.weight) / 100)
       } else {
         stock.allocation = 0
@@ -541,7 +541,6 @@
   .strategy-container {
     max-width: 1600px;
     margin: 0 auto;
-    padding: 16px;
   }
 
   .main-card {
