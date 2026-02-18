@@ -8,10 +8,6 @@
   <Container v-else class="layout-container">
     <ElAside :width="sidebarWidth" class="layout-aside">
       <ElMenu :default-active="activeMenu" class="layout-menu" @select="handleMenuSelect">
-        <MenuItem index="strategy">
-          <Icon><TrendCharts /></Icon>
-          <span>交易策略评估</span>
-        </MenuItem>
         <MenuItem index="home">
           <Icon><Histogram /></Icon>
           <span>交易策略回测</span>
@@ -19,6 +15,10 @@
         <MenuItem index="basedata">
           <Icon><DataLine /></Icon>
           <span>历史数据查询</span>
+        </MenuItem>
+        <MenuItem index="strategy">
+          <Icon><TrendCharts /></Icon>
+          <span>交易策略评估</span>
         </MenuItem>
       </ElMenu>
     </ElAside>
@@ -48,7 +48,7 @@
   })
 
   // 导航状态
-  const activeMenu = ref('strategy')
+  const activeMenu = ref('home')
   const currentComponent = shallowRef(Home)
 
   // 组件映射

@@ -3,7 +3,7 @@
     <!-- iOS风格顶部导航 -->
     <header class="ios-header">
       <div class="header-content">
-        <h1 class="header-title">交易策略评估</h1>
+        <h1 class="header-title">汽油荷包蛋</h1>
         <span v-if="evaluationResults.length > 0" class="header-date">
           {{ evaluationResults[0].date }}
         </span>
@@ -14,9 +14,6 @@
     <main class="ios-main">
       <!-- 资产设置卡片 -->
       <div class="ios-card assets-card">
-        <div class="card-header">
-          <h2 class="card-title">资产设置</h2>
-        </div>
         <div class="card-content">
           <!-- 总资产输入 -->
           <div class="ios-form-group">
@@ -55,7 +52,7 @@
               <span class="position-value">{{ totalPosition }} 元</span>
             </div>
             <div class="position-item">
-              <span class="position-label">jin仓位</span>
+              <span class="position-label">进攻仓位</span>
               <span class="position-value">{{ Math.floor(currentPosition) }} 元</span>
             </div>
             <div class="position-item">
@@ -63,7 +60,7 @@
               <span class="position-value">{{ Math.floor(actualDividendPosition) }} 元</span>
             </div>
             <div class="position-item">
-              <span class="position-label">红利估值</span>
+              <span class="position-label">红利仓位百分比</span>
               <span class="position-value">{{ Math.floor(dividendPosition) }}%</span>
             </div>
           </div>
@@ -105,9 +102,6 @@
 
       <!-- 策略评估结果卡片 -->
       <div v-else class="ios-card results-card">
-        <div class="card-header">
-          <h2 class="card-title">策略评估结果</h2>
-        </div>
         <div class="card-content">
           <!-- 股票列表 -->
           <div class="ios-stock-list">
@@ -390,22 +384,23 @@
 <style scoped lang="scss">
   @import '@/styles/variables.scss';
 
-  // 高级审美感配色方案
-  $primary-color: #0a58ca; // 深蓝色主色调
-  $secondary-color: #3b82f6; // 辅助蓝色
-  $accent-color: #60a5fa; // 强调色
-  $background-color: #f8fafc;
-  $card-background: #ffffff;
-  $text-primary: #1e293b;
-  $text-secondary: #64748b;
-  $text-tertiary: #94a3b8;
-  $border-color: #e2e8f0;
-  $success-color: #10b981;
-  $danger-color: #ef4444;
-  $warning-color: #f59e0b;
-  $neutral-color: #64748b;
+  // 苹果风格配色方案
+  $primary-color: #007aff; // iOS 蓝色主色调
+  $secondary-color: #34c759; // iOS 绿色
+  $accent-color: #ff9500; // iOS 橙色
+  $background-color: #f2f2f7; // iOS 背景色
+  $card-background: #ffffff; // iOS 卡片背景
+  $text-primary: #000000; // iOS 主文本色
+  $text-secondary: #3c3c43; // iOS 次要文本色
+  $text-tertiary: #8e8e93; // iOS  tertiary 文本色
+  $border-color: #e5e5ea; // iOS 边框色
+  $success-color: #34c759; // iOS 成功色
+  $danger-color: #ff3b30; // iOS 危险色
+  $warning-color: #ff9500; // iOS 警告色
+  $neutral-color: #8e8e93; // iOS 中性色
 
-  // 设计变量
+  // 设计变量 - 统一间距为4的倍数
+  $spacing: 4px;
   $radius: 12px;
   $small-radius: 8px;
   $input-radius: 10px;
@@ -423,22 +418,28 @@
       -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Helvetica Neue', Arial, sans-serif;
   }
 
-  // 顶部导航
+  // 顶部导航 - 苹果风格
   .ios-header {
-    background-color: $primary-color;
+    background-color: linear-gradient(135deg, $primary-color, #0056b3);
     color: #ffffff;
-    padding: 16px;
-    box-shadow: $header-shadow;
+    padding: $spacing * 4; // 16px
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
     position: sticky;
     top: 0;
     z-index: 100;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    background: linear-gradient(135deg, #007aff, #0056b3);
+  }
+
+  .ios-header:active {
+    background: linear-gradient(135deg, #0066cc, #004c99);
   }
 
   .header-content {
     display: flex;
     align-items: center;
-    justify-content: center;
-    gap: 12px;
+    position: relative;
+    width: 100%;
   }
 
   .header-title {
@@ -446,22 +447,38 @@
     font-weight: 600;
     margin: 0;
     letter-spacing: -0.02em;
+    font-family:
+      'SF Pro Display',
+      -apple-system,
+      BlinkMacSystemFont,
+      sans-serif;
+    position: absolute;
+    left: 50%;
+    transform: translateX(-50%);
   }
 
   .header-date {
     font-size: 13px;
     color: rgba(255, 255, 255, 0.9);
     font-weight: 500;
-    padding: 4px 10px;
+    padding: $spacing * 1 $spacing * 2.5; // 4px 10px
     background: rgba(255, 255, 255, 0.2);
-    border-radius: 12px;
+    border-radius: $spacing * 3; // 12px
     backdrop-filter: blur(8px);
+    transition: all 0.2s ease-in-out;
+    white-space: nowrap;
+    margin-left: auto;
+  }
+
+  .header-date:hover {
+    background: rgba(255, 255, 255, 0.25);
+    transform: scale(1.02);
   }
 
   // 主内容区
   .ios-main {
     flex: 1;
-    padding: 16px;
+    padding: $spacing * 4; // 16px
     overflow-y: auto;
   }
 
@@ -470,7 +487,7 @@
     background-color: $card-background;
     border-radius: $radius;
     box-shadow: $shadow;
-    margin-bottom: 16px;
+    margin-bottom: $spacing * 4; // 16px
     overflow: hidden;
     transition: $transition;
   }
@@ -480,36 +497,24 @@
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
   }
 
-  // 资产设置卡片优化
+  // 资产设置卡片 - 苹果风格
   .assets-card {
-    .card-header {
-      padding: 12px 16px 8px;
-      border-bottom: 1px solid $border-color;
-    }
-
-    .card-title {
-      font-size: 16px;
-      font-weight: 600;
-      color: $text-primary;
-      margin: 0;
-      letter-spacing: -0.02em;
-    }
-
     .card-content {
-      padding: 12px 16px;
+      padding: $spacing * 4 $spacing * 4; // 16px 16px
+      background-color: $card-background;
     }
 
     // 表单组优化
     .ios-form-group {
-      margin-bottom: 12px;
+      margin-bottom: $spacing * 3; // 12px
     }
 
     .ios-label {
       display: block;
       font-size: 13px;
-      font-weight: 500;
+      font-weight: 700;
       color: $text-secondary;
-      margin-bottom: 6px;
+      margin-bottom: $spacing * 1.5; // 6px
       letter-spacing: -0.01em;
     }
 
@@ -521,14 +526,14 @@
 
     .ios-input {
       flex: 1;
-      padding: 10px 14px;
+      padding: $spacing * 2.5 $spacing * 3.5; // 10px 14px
       border: 1px solid $border-color;
       border-radius: $input-radius;
       font-size: 15px;
       color: $primary-color;
-      background-color: $card-background;
+      background-color: #f9f9f9;
       font-weight: 600;
-      transition: $transition;
+      transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
       appearance: none;
       box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.05);
     }
@@ -536,12 +541,17 @@
     .ios-input:focus {
       outline: none;
       border-color: $primary-color;
-      box-shadow: 0 0 0 3px rgba(10, 88, 202, 0.1);
+      box-shadow: 0 0 0 3px rgba(0, 122, 255, 0.1);
+      background-color: $card-background;
+    }
+
+    .ios-input:active {
+      transform: scale(0.995);
     }
 
     .ios-unit {
       position: absolute;
-      right: 14px;
+      right: $spacing * 3.5; // 14px
       font-size: 15px;
       color: $text-tertiary;
       font-weight: 500;
@@ -551,31 +561,35 @@
     .position-grid {
       display: grid;
       grid-template-columns: 1fr 1fr;
-      gap: 8px;
-      margin: 12px 0;
+      gap: $spacing * 2; // 8px
+      margin: $spacing * 3 0; // 12px 0
     }
 
     .position-item {
-      background-color: rgba(10, 88, 202, 0.04);
+      background-color: rgba(0, 122, 255, 0.04);
       border-radius: $small-radius;
-      padding: 10px;
+      padding: $spacing * 2.5; // 10px
       display: flex;
       flex-direction: column;
-      gap: 3px;
-      transition: $transition;
-      border: 1px solid rgba(10, 88, 202, 0.1);
+      gap: $spacing * 0.75; // 3px
+      transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+      border: 1px solid rgba(0, 122, 255, 0.1);
     }
 
     .position-item:hover {
-      background-color: rgba(10, 88, 202, 0.08);
+      background-color: rgba(0, 122, 255, 0.08);
       transform: translateY(-1px);
-      box-shadow: 0 2px 4px rgba(10, 88, 202, 0.1);
+      box-shadow: 0 2px 4px rgba(0, 122, 255, 0.1);
+    }
+
+    .position-item:active {
+      transform: translateY(0) scale(0.98);
     }
 
     .position-label {
       font-size: 11px;
       color: $text-tertiary;
-      font-weight: 500;
+      font-weight: 700;
       text-transform: uppercase;
       letter-spacing: 0.05em;
     }
@@ -591,8 +605,8 @@
     .ios-hints {
       display: flex;
       flex-direction: row;
-      gap: 8px;
-      margin-top: 8px;
+      gap: $spacing * 2; // 8px
+      margin-top: $spacing * 2; // 8px
       flex-wrap: wrap;
       justify-content: center;
     }
@@ -603,12 +617,17 @@
     }
 
     .ios-hint-tag {
-      padding: 6px 14px;
+      padding: $spacing * 1.5 $spacing * 3.5; // 6px 14px
       font-size: 13px;
       font-weight: 600;
       border-radius: $tag-radius;
-      transition: $transition;
+      transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
       box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+      font-family:
+        'SF Pro Display',
+        -apple-system,
+        BlinkMacSystemFont,
+        sans-serif;
     }
 
     .ios-hint-tag.trade-day {
@@ -622,12 +641,12 @@
     }
 
     .ios-hint-tag.hint-buy {
-      background-color: $success-color;
+      background-color: $danger-color;
       color: #ffffff;
     }
 
     .ios-hint-tag.hint-sell {
-      background-color: $danger-color;
+      background-color: $success-color;
       color: #ffffff;
     }
 
@@ -640,64 +659,76 @@
       transform: translateY(-1px);
       box-shadow: 0 2px 4px rgba(0, 0, 0, 0.15);
     }
+
+    .ios-hint-tag:active {
+      transform: translateY(0) scale(0.98);
+    }
   }
 
-  // 加载状态
+  // 加载状态 - 苹果风格
   .ios-loading {
     display: flex;
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    padding: 60px 16px;
+    padding: $spacing * 15 $spacing * 4; // 60px 16px
   }
 
   .ios-loading-spinner {
     width: 40px;
     height: 40px;
-    border: 3px solid rgba(10, 88, 202, 0.2);
+    border: 3px solid rgba(0, 122, 255, 0.2);
     border-top-color: $primary-color;
     border-right-color: $primary-color;
     border-radius: 50%;
-    animation: spin 0.8s linear infinite;
-    margin-bottom: 16px;
+    animation: spin 0.8s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+    margin-bottom: $spacing * 4; // 16px
   }
 
   .ios-loading-text {
     color: $text-tertiary;
     font-size: 14px;
     font-weight: 500;
+    animation: fadeIn 0.5s ease-in-out;
   }
 
-  // 股票列表
+  // 股票列表 - 苹果风格
   .ios-stock-list {
     display: flex;
     flex-direction: column;
-    gap: 10px;
+    gap: $spacing * 2.5; // 10px
   }
 
   .ios-stock-item {
     background-color: #f8f8f8;
     border-radius: $small-radius;
-    padding: 14px;
-    transition: $transition;
+    padding: $spacing * 3.5; // 14px
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
     border: 1px solid transparent;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
   }
 
   .ios-stock-item:hover {
     background-color: #f0f7ff;
     transform: translateY(-1px);
+    box-shadow: 0 2px 4px rgba(0, 122, 255, 0.1);
+  }
+
+  .ios-stock-item:active {
+    transform: translateY(0) scale(0.99);
   }
 
   .ios-stock-item.top-8 {
     border: 1px solid $primary-color;
-    background-color: rgba(10, 88, 202, 0.05);
+    background-color: rgba(0, 122, 255, 0.05);
+    box-shadow: 0 2px 4px rgba(0, 122, 255, 0.1);
   }
 
   .stock-item-header {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    margin-bottom: 8px;
+    margin-bottom: $spacing * 2; // 8px
   }
 
   .stock-name {
@@ -705,13 +736,23 @@
     font-weight: 600;
     color: $text-primary;
     letter-spacing: -0.01em;
+    font-family:
+      'SF Pro Display',
+      -apple-system,
+      BlinkMacSystemFont,
+      sans-serif;
   }
 
   .stock-signal {
     font-size: 14px;
     font-weight: 600;
-    padding: 4px 8px;
-    border-radius: 8px;
+    padding: $spacing * 1 $spacing * 2; // 4px 8px
+    border-radius: $spacing * 2; // 8px
+    transition: all 0.2s ease-in-out;
+  }
+
+  .stock-signal:hover {
+    transform: scale(1.05);
   }
 
   .stock-item-footer {
@@ -730,6 +771,11 @@
     font-size: 15px;
     font-weight: 600;
     color: $text-primary;
+    transition: all 0.2s ease-in-out;
+  }
+
+  .allocation-value:hover {
+    transform: scale(1.02);
   }
 
   .allocation-value.success {
@@ -747,54 +793,120 @@
     }
   }
 
+  @keyframes fadeIn {
+    from {
+      opacity: 0;
+      transform: translateY(10px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  @keyframes slideInUp {
+    from {
+      opacity: 0;
+      transform: translateY(20px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  // 苹果风格微交互
+  .ios-card {
+    animation: slideInUp 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  .ios-card:nth-child(1) {
+    animation-delay: 0.05s;
+  }
+
+  .ios-card:nth-child(2) {
+    animation-delay: 0.1s;
+  }
+
+  // 滚动时的导航栏效果
+  .ios-header {
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  .ios-header.scrolled {
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  }
+
+  // 触摸反馈效果
+  .ios-button-effect {
+    position: relative;
+    overflow: hidden;
+  }
+
+  .ios-button-effect::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 0;
+    height: 0;
+    border-radius: 50%;
+    background-color: rgba(255, 255, 255, 0.3);
+    transform: translate(-50%, -50%);
+    transition:
+      width 0.6s,
+      height 0.6s;
+  }
+
+  .ios-button-effect:active::after {
+    width: 300px;
+    height: 300px;
+  }
+
   // 响应式调整
   @media (max-width: 480px) {
     .ios-main {
-      padding: 12px;
+      padding: $spacing * 3; // 12px
     }
 
     .ios-card {
-      margin-bottom: 12px;
+      margin-bottom: $spacing * 3; // 12px
     }
 
     .card-header {
-      padding: 12px 14px 8px;
+      padding: $spacing * 3 $spacing * 3.5 $spacing * 2; // 12px 14px 8px
     }
 
     .card-content {
-      padding: 12px 14px;
+      padding: $spacing * 3 $spacing * 3.5; // 12px 14px
     }
 
     .assets-card {
-      .card-header {
-        padding: 10px 14px 6px;
-      }
-
       .card-content {
-        padding: 10px 14px;
+        padding: $spacing * 3 $spacing * 3.5; // 12px 14px
       }
 
       .ios-form-group {
-        margin-bottom: 10px;
+        margin-bottom: $spacing * 2.5; // 10px
       }
 
       .ios-input {
-        padding: 9px 12px;
+        padding: $spacing * 2.25 $spacing * 3; // 9px 12px
         font-size: 14px;
       }
 
       .ios-unit {
-        right: 12px;
+        right: $spacing * 3; // 12px
         font-size: 14px;
       }
 
       .position-grid {
-        gap: 6px;
-        margin: 10px 0;
+        gap: $spacing * 1.5; // 6px
+        margin: $spacing * 2.5 0; // 10px 0
       }
 
       .position-item {
-        padding: 8px;
+        padding: $spacing * 2; // 8px
       }
 
       .position-label {
@@ -806,17 +918,17 @@
       }
 
       .ios-hints {
-        gap: 5px;
+        gap: $spacing * 1.25; // 5px
       }
 
       .ios-hint-tag {
-        padding: 5px 12px;
+        padding: $spacing * 1.25 $spacing * 3; // 5px 12px
         font-size: 12px;
       }
     }
 
     .ios-stock-item {
-      padding: 12px;
+      padding: $spacing * 3; // 12px
     }
 
     .header-title {
@@ -839,7 +951,7 @@
   // iPhone X 系列及以上适配
   @media (max-height: 812px) {
     .ios-main {
-      padding-bottom: 24px;
+      padding-bottom: $spacing * 6; // 24px
     }
   }
 </style>
