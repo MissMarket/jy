@@ -36,9 +36,24 @@
     return 100000
   }
 
-  const totalAssets = ref(loadTotalAssetsFromStorage()) // 总资产，优先从 localStorage 读取
+  // 从 localStorage 读取红利资产
+  const loadDividendAssetFromStorage = () => {
+    try {
+      const stored = localStorage.getItem('strategy_dividendAsset')
+      if (stored) {
+        const value = parseInt(stored, 10)
+        return isNaN(value) ? 0 : value
+      }
+    } catch (error) {
+      // 静默处理错误
+    }
+    return 0
+  }
 
-  // 计算当前仓位（买入或持有的分配资金之和）
+  const totalAssets = ref(loadTotalAssetsFromStorage()) // 总资产，优先从 localStorage 读取
+  const dividendAssetInput = ref(loadDividendAssetFromStorage()) // 红利资产输入值，优先从 localStorage 读取
+
+  // 计算进攻仓位（买入或持有的分配资金之和）
   const currentPosition = computed(() => {
     return evaluationResults.value.reduce((sum, stock) => {
       // 只有买入和持有才计入仓位
@@ -60,6 +75,178 @@
       // 静默处理错误
     }
   }
+
+  // 保存红利资产到 localStorage
+  const saveDividendAssetToStorage = () => {
+    try {
+      localStorage.setItem('strategy_dividendAsset', dividendAssetInput.value.toString())
+    } catch (error) {
+      // 静默处理错误
+    }
+  }
+
+  // 计算红利资产最大仓位
+  const maxDividendAsset = computed(() => {
+    return totalAssets.value - currentPosition.value
+  })
+
+  // 计算M值的函数
+  const calculateM = (a, b, c) => {
+    return (80 * Math.log(b / a)) / Math.log(c / a)
+  }
+
+  // 计算红利资产仓位
+  const dividendPosition = computed(() => {
+    // 从stockData中找到红利板块
+    const dividendStock = stockData.value.find(stock => stock.plate === '红利')
+    console.log('红利板块数据:', dividendStock)
+
+    if (!dividendStock || !dividendStock.priceArr || dividendStock.priceArr.length < 251) {
+      console.log('红利板块数据不足:', {
+        hasStock: !!dividendStock,
+        hasPriceArr: !!dividendStock?.priceArr,
+        priceArrLength: dividendStock?.priceArr?.length || 0,
+      })
+      return 0
+    }
+
+    // 获取最近251日的收盘价
+    const recentPrices = dividendStock.priceArr.slice(-251)
+    console.log('最近251日收盘价:', recentPrices)
+
+    // 按从低到高排序
+    const sortedPrices = [...recentPrices].sort((a, b) => a - b)
+    console.log('排序后收盘价:', sortedPrices)
+
+    // 当前收盘价
+    const currentPrice = recentPrices[recentPrices.length - 1]
+    console.log('当前收盘价:', currentPrice)
+
+    // 找到当前价格在排序数组中的位置
+    const currentIndex = sortedPrices.indexOf(currentPrice)
+    console.log('当前价格在排序数组中的位置:', currentIndex)
+
+    let position = 0
+
+    // 检查当前价格是否在前25名范围内
+    const isInTop25 = currentPrice <= sortedPrices[24]
+    // 检查当前价格是否在后25名范围内
+    const isInBottom25 = currentPrice >= sortedPrices[sortedPrices.length - 25]
+
+    if (isInTop25 || currentIndex < 25) {
+      // 前25名，最低分位100，依次递减0.4
+      // 找到当前价格在排序数组中的实际位置
+      const top25Index = sortedPrices.indexOf(currentPrice)
+      position = 100 - top25Index * 0.4
+      console.log('前25名计算仓位:', position, '索引:', top25Index)
+    } else if (isInBottom25 || currentIndex >= sortedPrices.length - 25) {
+      // 后25名，最高分位0，依次递增0.4
+      const bottom25Index = sortedPrices.indexOf(currentPrice)
+      const reverseIndex = sortedPrices.length - 1 - bottom25Index
+      position = reverseIndex * 0.4
+      console.log('后25名计算仓位:', position, '反向索引:', reverseIndex)
+    } else {
+      // 中间201个数据
+      const middlePrices = sortedPrices.slice(25, sortedPrices.length - 25)
+      const a = middlePrices[0]
+      const c = middlePrices[middlePrices.length - 1]
+      const b = currentPrice
+
+      console.log('中间数据计算:', {
+        a,
+        b,
+        c,
+        middlePricesLength: middlePrices.length,
+      })
+
+      if (a <= b && b <= c) {
+        const m = calculateM(a, b, c)
+        position = 90 - m
+        console.log('中间数据计算M值:', m, '计算仓位:', position)
+      } else {
+        position = 45 // 默认值
+        console.log('中间数据条件不满足，使用默认仓位:', position)
+      }
+    }
+
+    const finalPosition = Math.max(0, Math.min(100, position))
+    console.log('最终仓位:', finalPosition)
+
+    return finalPosition
+  })
+
+  // 计算红利的实际仓位（最大仓位 * 仓位百分比）
+  const actualDividendPosition = computed(() => {
+    const position = maxDividendAsset.value * (dividendPosition.value / 100)
+    console.log(
+      '红利实际仓位:',
+      position,
+      '最大仓位:',
+      maxDividendAsset.value,
+      '仓位百分比:',
+      dividendPosition.value,
+    )
+    return position
+  })
+
+  // 计算红利资产与目标的差值和提示信息
+  const dividendAssetDiff = computed(() => {
+    const diff = actualDividendPosition.value - dividendAssetInput.value
+    return diff
+  })
+
+  // 红利资产提示信息
+  const dividendAssetHint = computed(() => {
+    const diff = dividendAssetDiff.value
+    if (Math.abs(diff) < 0.01) {
+      return { text: '已达标', type: 'neutral' }
+    } else if (diff > 0) {
+      // 实际仓位大于输入值，需要买入
+      return { text: `买入 ${diff.toFixed(2)} 元`, type: 'buy' }
+    } else {
+      // 实际仓位小于输入值，需要卖出
+      return { text: `卖出 ${Math.abs(diff).toFixed(2)} 元`, type: 'sell' }
+    }
+  })
+
+  // 计算总仓位（进攻仓位 + 红利仓位）
+  const totalPosition = computed(() => {
+    return Math.floor(currentPosition.value) + Math.floor(actualDividendPosition.value)
+  })
+
+  // 计算红利交易日/休息日提示
+  const dividendTradeDayHint = computed(() => {
+    // 从stockData中找到红利板块
+    const dividendStock = stockData.value.find(stock => stock.plate === '红利')
+    if (!dividendStock || !dividendStock.dateArr) {
+      return { text: '', type: '' }
+    }
+
+    // 筛选出2026年的数据
+    const year2026Data = dividendStock.dateArr.filter(date => {
+      // 假设date格式为'YYYY-MM-DD'或类似格式
+      return date.toString().includes('2026')
+    })
+
+    console.log('2026年红利数据:', year2026Data)
+
+    // 计算数据量
+    const dataCount = year2026Data.length
+    console.log('2026年红利数据量:', dataCount)
+
+    // 判断奇偶性（排除0的情况）
+    if (dataCount === 0) {
+      return { text: '', type: '' }
+    }
+
+    if (dataCount % 2 === 0) {
+      // 偶数：红利交易日，红色
+      return { text: '红利交易日', type: 'trade' }
+    } else {
+      // 奇数：红利休息日，绿色
+      return { text: '红利休息日', type: 'rest' }
+    }
+  })
 
   // 计算分配资金
   const calculateAllocation = () => {
@@ -89,6 +276,7 @@
       totalAssets.value = 0
     }
     totalAssets.value = Math.floor(totalAssets.value)
+    saveTotalAssetsToStorage() // 保存到localStorage
     calculateAllocation()
   }
 
@@ -406,25 +594,6 @@
           </ElIcon>
           <span class="header-title">交易策略评估</span>
         </div>
-        <div class="header-right">
-          <div class="assets-input-group">
-            <span class="label">总资产:</span>
-            <ElInputNumber
-              v-model="totalAssets"
-              :min="0"
-              :step="10000"
-              :controls="false"
-              placeholder="请输入总资产"
-              style="width: 140px"
-              @change="handleAssetsChange"
-            />
-            <span class="unit">元</span>
-          </div>
-          <div class="position-display">
-            <span class="label">当前仓位:</span>
-            <div class="position-tag">{{ currentPosition.toLocaleString() }} 元</div>
-          </div>
-        </div>
       </div>
 
       <!-- 加载状态 -->
@@ -435,6 +604,87 @@
 
       <!-- 表格内容 -->
       <div v-else class="table-section">
+        <!-- 资产信息区域 -->
+        <div class="asset-info-section">
+          <!-- 第一行：总资产和红利资产 -->
+          <div class="asset-info-row">
+            <div class="assets-input-group">
+              <span class="label">总资产:</span>
+              <ElInputNumber
+                v-model="totalAssets"
+                :min="0"
+                :step="10000"
+                :controls="false"
+                placeholder="请输入总资产"
+                style="width: 180px"
+                @change="handleAssetsChange"
+              />
+              <span class="unit">元</span>
+            </div>
+            <div class="assets-input-group">
+              <span class="label">红利资产:</span>
+              <ElInputNumber
+                v-model="dividendAssetInput"
+                :min="0"
+                :max="maxDividendAsset"
+                :step="10000"
+                :controls="false"
+                placeholder="请输入红利资产"
+                style="width: 180px"
+                @change="saveDividendAssetToStorage"
+              />
+              <span class="unit">元</span>
+            </div>
+          </div>
+
+          <!-- 第二行：总仓位、进攻仓位、红利仓位、红利估值 -->
+          <div class="asset-info-row">
+            <div class="assets-input-group">
+              <span class="label">总仓位:</span>
+              <div class="position-tag">{{ totalPosition }} 元</div>
+            </div>
+            <div class="assets-input-group">
+              <span class="label">进攻仓位:</span>
+              <div class="position-tag">{{ Math.floor(currentPosition) }} 元</div>
+            </div>
+            <div class="assets-input-group">
+              <span class="label">红利仓位:</span>
+              <div class="position-tag">{{ Math.floor(actualDividendPosition) }} 元</div>
+            </div>
+            <div class="assets-input-group">
+              <span class="label">红利估值:</span>
+              <div class="position-tag">{{ Math.floor(dividendPosition) }}%</div>
+            </div>
+          </div>
+
+          <!-- 第三行：红利交易日和买卖提示 -->
+          <div class="asset-info-row">
+            <div class="assets-input-group">
+              <div
+                v-if="dividendTradeDayHint.text"
+                class="trade-day-hint"
+                :class="{
+                  'trade-day': dividendTradeDayHint.type === 'trade',
+                  'rest-day': dividendTradeDayHint.type === 'rest',
+                }"
+              >
+                {{ dividendTradeDayHint.text }}
+              </div>
+            </div>
+            <div class="assets-input-group">
+              <div
+                class="hint-tag"
+                :class="{
+                  'hint-buy': dividendAssetHint.type === 'buy',
+                  'hint-sell': dividendAssetHint.type === 'sell',
+                  'hint-neutral': dividendAssetHint.type === 'neutral',
+                }"
+              >
+                {{ dividendAssetHint.text }}
+              </div>
+            </div>
+          </div>
+        </div>
         <ElTable
           :data="tableData"
           border
@@ -615,6 +865,46 @@
     box-shadow: 0 1px 2px rgba(0, 122, 255, 0.3);
   }
 
+  .hint-tag {
+    padding: 4px 12px;
+    font-size: 14px;
+    font-weight: 600;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+  }
+
+  .hint-buy {
+    background-color: #ff3b30;
+    color: #ffffff;
+  }
+
+  .hint-sell {
+    background-color: #34c759;
+    color: #ffffff;
+  }
+
+  .hint-neutral {
+    background-color: #999999;
+    color: #ffffff;
+  }
+
+  // 红利交易日/休息日提示样式
+  .trade-day-hint {
+    padding: 4px 12px;
+    font-size: 14px;
+    font-weight: 600;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+  }
+
+  .trade-day {
+    background-color: #ff3b30;
+    color: #ffffff;
+  }
+
+  .rest-day {
+    background-color: #34c759;
+    color: #ffffff;
+  }
+
   .loading-section {
     display: flex;
     flex-direction: column;
@@ -641,6 +931,27 @@
 
   .table-section {
     padding: 16px;
+  }
+
+  // 资产信息区域样式
+  .asset-info-section {
+    margin-bottom: 16px;
+    padding: 12px;
+    border: 1px solid #e0e0e0;
+    border-radius: 8px;
+    background-color: #f9f9f9;
+  }
+
+  .asset-info-row {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    margin-bottom: 8px;
+    flex-wrap: wrap;
+  }
+
+  .asset-info-row:last-child {
+    margin-bottom: 0;
   }
 
   .data-table {

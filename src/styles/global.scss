@@ -847,3 +847,9 @@ a {
 .el-card__body {
   padding: 0 !important;
 }
+
+// 全局移除 .el-main 的 padding
+.el-main {
+  --el-main-padding: 0 !important;
+  padding: 0 !important;
+}
