@@ -364,12 +364,47 @@
     // 加载红利资产
     dividendAssetInput.value = loadDividendAssetFromStorage()
 
-    // 获取股票数据
+    // 获取今天的日期（YYYY-MM-DD格式）
+    const today = new Date().toISOString().split('T')[0]
+    let hasValidStoredData = false
+
+    // 尝试从localStorage获取存储的评估结果
+    try {
+      const storedData = localStorage.getItem('strategyEvaluationResults')
+      if (storedData) {
+        const parsedData = JSON.parse(storedData)
+        // 验证数据格式是否正确
+        if (Array.isArray(parsedData) && parsedData.length === 2) {
+          const storedDate = parsedData[0]
+          const storedResults = parsedData[1]
+          // 比较日期是否相同
+          if (storedDate === today) {
+            evaluationResults.value = storedResults
+            hasValidStoredData = true
+          }
+        }
+      }
+    } catch (error) {
+      console.error('读取localStorage失败:', error)
+    }
+
+    // 始终执行fetchStockData()获取最新股票数据
     await fetchStockData()
 
-    // 评估策略
-    const results = evaluateStrategies()
-    evaluationResults.value = results
+    // 如果没有有效的存储数据或日期不同，则执行评估策略
+    if (!hasValidStoredData) {
+      // 评估策略
+      const results = evaluateStrategies()
+      evaluationResults.value = results
+
+      // 将结果存储到localStorage
+      try {
+        const storageData = [today, results]
+        localStorage.setItem('strategyEvaluationResults', JSON.stringify(storageData))
+      } catch (error) {
+        console.error('写入localStorage失败:', error)
+      }
+    }
 
     // 计算资金分配
     calculateAllocationWrapper()

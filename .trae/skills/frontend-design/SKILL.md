@@ -1,35 +1,35 @@
 ---
 name: "frontend-design"
-description: "Creates high-quality, unique, production-ready frontend designs. Invoke when user needs frontend interface design, UI improvements, or visual enhancements."
+description: "创建高质量、独特、可直接用于生产的前端设计。当用户需要前端界面设计、UI 改进或视觉增强时调用。"
 ---
 
-# Frontend Design
+# 前端设计
 
-This skill helps create visually appealing and production-ready frontend designs. It provides guidance on layout, color schemes, typography, and overall visual aesthetics for web applications.
+该技能帮助创建视觉吸引力强且可直接用于生产的前端设计。它提供有关网页应用布局、配色方案、排版和整体视觉美学的指导。
 
-## When to Use
+## 使用场景
 
-- When creating new frontend interfaces
-- When improving existing UI designs
-- When seeking visual enhancements for web applications
-- When designing responsive layouts
-- When needing production-ready design solutions
+- 创建新的前端界面时
+- 改进现有 UI 设计时
+- 寻求网页应用视觉增强时
+- 设计响应式布局时
+- 需要可直接用于生产的设计解决方案时
 
-## Key Features
+## 核心功能
 
-- High-quality design recommendations
-- Unique and visually appealing layouts
-- Production-ready implementation guidelines
-- Responsive design considerations
-- Color scheme and typography best practices
+- 高质量的设计建议
+- 独特且视觉吸引力强的布局
+- 可直接用于生产的实施指南
+- 响应式设计考虑
+- 配色方案和排版最佳实践
 
-## Example Usage
+## 使用示例
 
-- "Design a modern dashboard interface for our analytics tool"
-- "Improve the visual appeal of our product landing page"
-- "Create a responsive navigation menu for our website"
-- "Enhance the UI of our mobile application"
+- "为我们的分析工具设计现代仪表板界面"
+- "提升我们产品着陆页的视觉吸引力"
+- "为我们的网站创建响应式导航菜单"
+- "增强我们移动应用的 UI"
 
-## Output Format
+## 输出格式
 
-The skill provides design recommendations, code snippets, and implementation guidelines to achieve high-quality frontend designs that meet production standards.
+该技能提供设计建议、代码片段和实施指南，以实现符合生产标准的高质量前端设计。
