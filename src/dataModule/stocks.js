@@ -102,10 +102,10 @@ export default [
     fund: '鹏华中证中药ETF联接C',
   },
   {
-    plate: '纳指',
-    stock: '纳指ETF',
-    id: 'SZ159941',
-    fund: '华安纳斯达克100指数C',
+    plate: '机器',
+    stock: '机器人ETF',
+    id: 'SZ159770',
+    fund: '天弘中证机器人ETF联接C',
   },
   {
     plate: '红利',
