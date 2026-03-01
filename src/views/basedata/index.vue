@@ -710,7 +710,7 @@
 </script>
 
 <style scoped lang="scss">
-  @import '@/styles/variables.scss';
+  @use '@/styles/variables.scss' as *;
 
   .basedata-container {
     max-width: 1400px;

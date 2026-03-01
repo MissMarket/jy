@@ -86,6 +86,7 @@
                   'hint-sell': dividendAssetHint.type === 'sell',
                   'hint-neutral': dividendAssetHint.type === 'neutral',
                 }"
+                @click="handleSortClick"
               >
                 {{ dividendAssetHint.text }}
               </div>
@@ -109,16 +110,29 @@
               v-for="(stock, index) in evaluationResults"
               :key="index"
               class="ios-stock-item"
-              :class="{ 'top-8': index < 8 }"
+              :class="{
+                'group-a': stock.originalIndex < 5,
+                'group-b': stock.originalIndex >= 5 && stock.originalIndex < 10,
+                'group-c': stock.originalIndex >= 10 && stock.originalIndex < 19,
+                'signal-buy': stock.tradingSignal.signal === '买入',
+                'signal-sell': stock.tradingSignal.signal === '卖出',
+                'signal-hold': stock.tradingSignal.signal === '持有',
+                'signal-empty': stock.tradingSignal.signal === '空仓',
+              }"
             >
-              <div class="stock-item-header">
-                <span class="stock-name">{{ stock.name }}</span>
-                <span class="stock-signal" :style="{ color: stock.tradingSignal.color }">
-                  {{ stock.tradingSignal.signal }}
-                </span>
+              <div
+                class="group-badge"
+                :class="{
+                  'badge-diamond': stock.originalIndex < 5,
+                  'badge-gold': stock.originalIndex >= 5 && stock.originalIndex < 10,
+                  'badge-silver': stock.originalIndex >= 10 && stock.originalIndex < 19,
+                }"
+              >
+                {{ stock.originalIndex < 5 ? 'A' : stock.originalIndex < 10 ? 'B' : 'C' }}
               </div>
-              <div class="stock-item-footer">
-                <span class="allocation-label">资金</span>
+              <div class="stock-item-header">
+                <span class="stock-name">{{ stock.name }}{{ stock.tradingSignal.signal }}</span>
+                <span class="stock-signal" :style="{ color: stock.tradingSignal.color }" />
                 <span
                   v-if="stock.allocation > 0"
                   class="allocation-value"
@@ -138,6 +152,7 @@
 
 <script setup>
   import { ref, computed, onMounted } from 'vue'
+  import dayjs from 'dayjs'
   import { useStockData } from '@/composables/useStockData'
   import { useStrategy } from '@/composables/useStrategy'
 
@@ -148,7 +163,9 @@
   // 响应式数据
   const totalAssets = ref(100000)
   const evaluationResults = ref([])
+  const originalEvaluationResults = ref([])
   const dividendAssetInput = ref(0)
+  const isSorted = ref(false)
 
   // 从 localStorage 读取总资产
   const loadTotalAssetsFromStorage = () => {
@@ -286,7 +303,7 @@
   const dividendAssetHint = computed(() => {
     const diff = dividendAssetDiff.value
     if (Math.abs(diff) < 0.01) {
-      return { text: '已达标', type: 'neutral' }
+      return { text: '不操作', type: 'neutral' }
     } else if (diff > 0) {
       // 实际仓位大于输入值，需要买入
       return { text: `买入 ${Math.floor(diff)} 元`, type: 'buy' }
@@ -309,18 +326,20 @@
       return { text: '', type: '' }
     }
 
-    // 筛选出2026年的数据
-    const year2026Data = dividendStock.dateArr.filter(date => {
-      // 假设date格式为'YYYY-MM-DD'或类似格式
-      return date.toString().includes('2026')
+    // 获取当前年份
+    const currentYear = dayjs().year().toString()
+
+    // 筛选出当前年份的数据
+    const currentYearData = dividendStock.dateArr.filter(date => {
+      return date.toString().includes(currentYear)
     })
 
-    if (year2026Data.length === 0) {
+    if (currentYearData.length === 0) {
       return { text: '', type: '' }
     }
 
     // 检查数据量是否为偶数（不包括0）
-    if (year2026Data.length % 2 === 0 && year2026Data.length > 0) {
+    if (currentYearData.length % 2 === 0 && currentYearData.length > 0) {
       return { text: '红利交易日', type: 'trade' }
     } else {
       return { text: '红利休息日', type: 'rest' }
@@ -357,6 +376,42 @@
     saveDividendAssetToStorage()
   }
 
+  // 交易信号排序优先级
+  const signalPriority = {
+    买入: 1,
+    卖出: 2,
+    持有: 3,
+    空仓: 4,
+  }
+
+  // 处理排序点击
+  const handleSortClick = () => {
+    if (!isSorted.value) {
+      // 对整个列表进行排序：先按交易信号优先级，再按总分从高到低
+      evaluationResults.value.sort((a, b) => {
+        const signalA = a.tradingSignal?.signal || '空仓'
+        const signalB = b.tradingSignal?.signal || '空仓'
+        const priorityA = signalPriority[signalA] || 999
+        const priorityB = signalPriority[signalB] || 999
+
+        if (priorityA !== priorityB) {
+          return priorityA - priorityB
+        }
+        // 次级排序：按总分从高到低
+        return b.totalScore - a.totalScore
+      })
+      // 重新计算资金分配
+      calculateAllocationWrapper()
+      isSorted.value = true
+    } else {
+      // 恢复原始排序
+      evaluationResults.value = JSON.parse(JSON.stringify(originalEvaluationResults.value))
+      // 重新计算资金分配
+      calculateAllocationWrapper()
+      isSorted.value = false
+    }
+  }
+
   // 初始化
   const initialize = async () => {
     // 加载总资产
@@ -379,7 +434,12 @@
           const storedResults = parsedData[1]
           // 比较日期是否相同
           if (storedDate === today) {
-            evaluationResults.value = storedResults
+            // 确保数据有originalIndex
+            const resultsWithIndex = storedResults.map((stock, index) => ({
+              ...stock,
+              originalIndex: stock.originalIndex !== undefined ? stock.originalIndex : index,
+            }))
+            evaluationResults.value = resultsWithIndex
             hasValidStoredData = true
           }
         }
@@ -395,19 +455,32 @@
     if (!hasValidStoredData) {
       // 评估策略
       const results = evaluateStrategies()
-      evaluationResults.value = results
+      // 添加原始索引
+      const resultsWithIndex = results.map((stock, index) => ({
+        ...stock,
+        originalIndex: index,
+      }))
+      evaluationResults.value = resultsWithIndex
+
+      // 先计算资金分配
+      calculateAllocationWrapper()
+
+      // 保存包含allocation的原始结果
+      originalEvaluationResults.value = JSON.parse(JSON.stringify(evaluationResults.value))
 
       // 将结果存储到localStorage
       try {
-        const storageData = [today, results]
+        const storageData = [today, evaluationResults.value]
         localStorage.setItem('strategyEvaluationResults', JSON.stringify(storageData))
       } catch (error) {
         console.error('写入localStorage失败:', error)
       }
+    } else {
+      // 先计算资金分配
+      calculateAllocationWrapper()
+      // 保存包含allocation的原始结果
+      originalEvaluationResults.value = JSON.parse(JSON.stringify(evaluationResults.value))
     }
-
-    // 计算资金分配
-    calculateAllocationWrapper()
   }
 
   // 生命周期钩子
@@ -417,7 +490,7 @@
 </script>
 
 <style scoped lang="scss">
-  @import '@/styles/variables.scss';
+  @use '@/styles/variables.scss' as *;
 
   // 苹果风格配色方案
   $primary-color: #007aff; // iOS 蓝色主色调
@@ -663,6 +736,8 @@
         -apple-system,
         BlinkMacSystemFont,
         sans-serif;
+      cursor: pointer;
+      user-select: none;
     }
 
     .ios-hint-tag.trade-day {
@@ -691,12 +766,13 @@
     }
 
     .ios-hint-tag:hover {
-      transform: translateY(-1px);
-      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.15);
+      transform: translateY(-2px);
+      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
     }
 
     .ios-hint-tag:active {
-      transform: translateY(0) scale(0.98);
+      transform: translateY(0) scale(0.97);
+      box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
     }
   }
 
@@ -759,6 +835,74 @@
     box-shadow: 0 2px 4px rgba(0, 122, 255, 0.1);
   }
 
+  // A组 - 钻石边框
+  .ios-stock-item.group-a {
+    position: relative;
+    border: 3px solid #00bcd4;
+  }
+
+  // B组 - 黄金边框
+  .ios-stock-item.group-b {
+    position: relative;
+    border: 3px solid #ffb300;
+  }
+
+  // C组 - 白银边框
+  .ios-stock-item.group-c {
+    position: relative;
+    border: 3px solid #757575;
+  }
+
+  // 交易信号背景色
+  .ios-stock-item.signal-buy {
+    background-color: #ffebee;
+  }
+
+  .ios-stock-item.signal-sell {
+    background-color: #e8f5e8;
+  }
+
+  .ios-stock-item.signal-hold {
+    background-color: #fff8e1;
+  }
+
+  .ios-stock-item.signal-empty {
+    background-color: #f5f5f5;
+  }
+
+  // 分组徽章
+  .group-badge {
+    position: absolute;
+    top: -10px;
+    right: -10px;
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 14px;
+    font-weight: 600;
+    color: #fff;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+    z-index: 10;
+  }
+
+  .badge-diamond {
+    background-color: #00bcd4;
+    border: 2px solid #18ffff;
+  }
+
+  .badge-gold {
+    background-color: #ffb300;
+    border: 2px solid #ffd54f;
+  }
+
+  .badge-silver {
+    background-color: #757575;
+    border: 2px solid #bdbdbd;
+  }
+
   .stock-item-header {
     display: flex;
     align-items: center;
@@ -768,8 +912,8 @@
 
   .stock-name {
     font-size: 16px;
-    font-weight: 600;
-    color: $text-primary;
+    font-weight: 500;
+    color: #000000;
     letter-spacing: -0.01em;
     font-family:
       'SF Pro Display',
@@ -780,7 +924,7 @@
 
   .stock-signal {
     font-size: 14px;
-    font-weight: 600;
+    font-weight: 500;
     padding: $spacing * 1 $spacing * 2; // 4px 8px
     border-radius: $spacing * 2; // 8px
     transition: all 0.2s ease-in-out;
@@ -798,14 +942,14 @@
 
   .allocation-label {
     font-size: 14px;
-    color: $text-secondary;
+    color: #000000;
     font-weight: 500;
   }
 
   .allocation-value {
     font-size: 15px;
-    font-weight: 600;
-    color: $text-primary;
+    font-weight: 500;
+    color: #000000;
     transition: all 0.2s ease-in-out;
   }
 
@@ -814,11 +958,11 @@
   }
 
   .allocation-value.success {
-    color: $success-color;
+    color: #000000;
   }
 
   .allocation-value.warning {
-    color: $warning-color;
+    color: #000000;
   }
 
   // 动画

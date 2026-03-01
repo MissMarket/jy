@@ -230,13 +230,12 @@ export const useStrategy = () => {
   const calculateAllocation = (evaluationResults, totalAssets) => {
     const results = [...evaluationResults]
 
-    results.forEach((stock, index) => {
-      // 只有前8名且有买入/持有信号才分配资金
+    results.forEach(stock => {
+      // 只有买入/持有信号才分配资金
       const signal = stock.tradingSignal?.signal
       const isValidSignal = signal === '买入' || signal === '持有'
-      const isTop8 = index < 8
 
-      if (isTop8 && isValidSignal && stock.weight > 0) {
+      if (isValidSignal && stock.weight > 0) {
         stock.allocation = Math.floor((totalAssets * stock.weight) / 100)
       } else {
         stock.allocation = 0

@@ -51,7 +51,7 @@
 </script>
 
 <style scoped lang="scss">
-  @import '@/styles/variables.scss';
+  @use '@/styles/variables.scss' as *;
 
   .mobile-header {
     background: linear-gradient(135deg, $primary-color 0%, $secondary-color 100%);

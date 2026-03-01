@@ -786,7 +786,7 @@
 </template>
 
 <style scoped lang="scss">
-  @import '@/styles/variables.scss';
+  @use '@/styles/variables.scss' as *;
 
   .strategy-container {
     max-width: 1600px;

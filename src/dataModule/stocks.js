@@ -33,7 +33,7 @@ export default [
     plate: '证券',
     stock: '证券公司',
     id: 'SZ399975',
-    fund: '天弘中证全指证券公司ETF联接C',
+    fund: '易方达中证全指证券公司ETF联接C',
   },
   {
     plate: '小盘',
@@ -50,8 +50,8 @@ export default [
   {
     plate: '半导',
     stock: '芯片ETF',
-    id: 'SH516920',
-    fund: '天弘中证芯片产业指数C',
+    id: 'SH516350',
+    fund: '易方达芯片产业ETF联接C',
   },
   {
     plate: '传媒',
@@ -61,27 +61,27 @@ export default [
   },
   {
     plate: '医药',
-    stock: '生物医药',
-    id: 'SZ399441',
-    fund: '天弘国证生物医药指数C',
+    stock: '中证医疗',
+    id: 'SZ399989',
+    fund: '易方达中证医疗ETF联接C',
   },
   {
     plate: '恒生',
-    stock: '恒生科技30ETF',
+    stock: '恒生科技指数ETF',
     id: 'SH513010',
-    fund: '华安恒生科技指数C',
+    fund: '易方达恒生科技ETF联接C',
   },
   {
     plate: '新能',
-    stock: 'CS新能车',
-    id: 'SZ399976',
-    fund: '天弘中证新能源车C',
+    stock: '中证新能',
+    id: 'SZ399808',
+    fund: '易方达中证新能源ETF联接C',
   },
   {
     plate: '家电',
-    stock: '龙头家电ETF',
-    id: 'SZ159730',
-    fund: '天弘国证龙头家电指数C',
+    stock: '家电龙头ETF',
+    id: 'SZ159328',
+    fund: '易方达中证家电龙头ETF联接C',
   },
   {
     plate: '人工',

@@ -231,37 +231,65 @@ export const useStockData = () => {
     // 按总分从高到低排序
     results.sort((a, b) => b.totalScore - a.totalScore)
 
-    // 计算前8名的权重（基于平均真实波动率的倒数）
-    const top8 = results.slice(0, 8)
-    const inverseRates = top8.map(stock => {
-      // 避免除零，最小波动率设为0.01%
-      const rate = Math.max(stock.atrRate, 0.01)
-      return 1 / rate
-    })
-    const sumInverse = inverseRates.reduce((sum, inv) => sum + inv, 0)
+    // 剔除红利数据（如果存在）
+    const filteredResults = results.filter(stock => stock.name !== '红利')
 
-    // 分配权重，保留1位小数
-    let weights = results.map((_stock, index) => {
-      if (index < 8) {
-        const weight = (inverseRates[index] / sumInverse) * 80
+    // 初始化权重数组
+    let weights = Array(filteredResults.length).fill(0)
+
+    // 计算权重分配函数
+    const calculateGroupWeights = (group, totalWeight) => {
+      const inverseRates = group.map(stock => {
+        // 避免除零，最小波动率设为0.01%
+        const rate = Math.max(stock.atrRate, 0.01)
+        return 1 / rate
+      })
+      const sumInverse = inverseRates.reduce((sum, inv) => sum + inv, 0)
+
+      return group.map((stock, index) => {
+        const weight = (inverseRates[index] / sumInverse) * totalWeight
         return Math.round(weight * 10) / 10 // 保留1位小数
-      }
-      return 0
-    })
+      })
+    }
 
-    // 调整权重使总和正好为80（处理四舍五入误差）
-    const currentSum = weights.slice(0, 8).reduce((sum, w) => sum + w, 0)
-    if (currentSum !== 80 && weights[0] > 0) {
-      weights[0] = Math.round((weights[0] + (80 - currentSum)) * 10) / 10
+    // 分配各组权重
+    if (filteredResults.length >= 19) {
+      // A组：前5名，权重40
+      const groupA = filteredResults.slice(0, 5)
+      const weightsA = calculateGroupWeights(groupA, 40)
+      weights.splice(0, 5, ...weightsA)
+
+      // B组：6-10名，权重25
+      const groupB = filteredResults.slice(5, 10)
+      const weightsB = calculateGroupWeights(groupB, 25)
+      weights.splice(5, 5, ...weightsB)
+
+      // C组：11-19名，权重27
+      const groupC = filteredResults.slice(10, 19)
+      const weightsC = calculateGroupWeights(groupC, 27)
+      weights.splice(10, 9, ...weightsC)
+
+      // 调整各组权重总和（处理四舍五入误差）
+      const adjustGroupWeights = (startIndex, endIndex, targetSum) => {
+        const currentSum = weights.slice(startIndex, endIndex).reduce((sum, w) => sum + w, 0)
+        if (currentSum !== targetSum && weights[startIndex] > 0) {
+          weights[startIndex] =
+            Math.round((weights[startIndex] + (targetSum - currentSum)) * 10) / 10
+        }
+      }
+
+      adjustGroupWeights(0, 5, 40) // A组
+      adjustGroupWeights(5, 10, 25) // B组
+      adjustGroupWeights(10, 19, 27) // C组
     }
 
     // 将权重添加到结果中
-    results.forEach((stock, index) => {
+    filteredResults.forEach((stock, index) => {
       stock.weight = weights[index]
       stock.allocation = 0 // 初始化分配资金
     })
 
-    return results
+    return filteredResults
   }
 
   return {
