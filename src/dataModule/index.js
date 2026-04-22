@@ -85,9 +85,10 @@ const batchSaveStockData = async stockDataList => {
  */
 const fetchStockDataForYears = async stockInfo => {
   const today = dayjs()
-  const yesterday = today.subtract(1, 'day')
-  const startDate = today.subtract(800, 'day') // 500天前
-
+  const yesterday = today.subtract(500, 'day')
+  const startDate = today.subtract(1300, 'day') // 500天前
+  // const yesterday = today.subtract(1, 'day')
+  // const startDate = today.subtract(800, 'day') // 500天前
   const allData = []
 
   try {
