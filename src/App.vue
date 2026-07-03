@@ -121,6 +121,6 @@
   .layout-main {
     background-color: #f2f2f7;
     height: 100vh;
-    overflow-y: auto;
+    overflow: hidden;
   }
 </style>

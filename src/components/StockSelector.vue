@@ -24,7 +24,7 @@
   const props = defineProps({
     title: {
       type: String,
-      default: '选择股票',
+      default: '选择指数',
     },
     stocks: {
       type: Array,

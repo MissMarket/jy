@@ -1,8 +1,5 @@
 <template>
   <div class="strategy-result">
-    <div class="result-header">
-      <h3 class="result-title">{{ title }}</h3>
-    </div>
     <div class="result-body">
       <!-- 策略对比结果 -->
       <div v-if="comparison" class="comparison-section">
@@ -43,21 +40,6 @@
           <DescriptionsItem label="初始资金">
             ¥{{ Number(hold.initialCapital).toLocaleString() }}
           </DescriptionsItem>
-          <DescriptionsItem label="买入日">
-            第{{ hold.buyDay }}天，价格 ¥{{ hold.buyPrice }}
-          </DescriptionsItem>
-          <DescriptionsItem label="卖出日">
-            第{{ hold.sellDay }}天，价格 ¥{{ hold.sellPrice }}
-          </DescriptionsItem>
-          <DescriptionsItem label="买入股数">
-            {{ hold.shares }}
-          </DescriptionsItem>
-          <DescriptionsItem label="买入成本">
-            ¥{{ Number(hold.cost).toLocaleString() }}
-          </DescriptionsItem>
-          <DescriptionsItem label="卖出收入">
-            ¥{{ Number(hold.proceeds).toLocaleString() }}
-          </DescriptionsItem>
           <DescriptionsItem label="最终资金">
             ¥{{ Number(hold.finalCapital).toLocaleString() }}
           </DescriptionsItem>
@@ -66,6 +48,7 @@
               {{ hold.returnRate }}%
             </Tag>
           </DescriptionsItem>
+          <DescriptionsItem label="总交易次数"> 1 </DescriptionsItem>
         </Descriptions>
       </div>
     </div>
@@ -110,19 +93,6 @@
     border-radius: $border-radius-lg;
     padding: $spacing-lg;
     box-shadow: $shadow-sm;
-  }
-
-  .result-header {
-    margin-bottom: $spacing-md;
-    padding-bottom: $spacing-sm;
-    border-bottom: 1px solid $border-color;
-  }
-
-  .result-title {
-    font-size: $font-size-lg;
-    font-weight: $font-weight-semibold;
-    color: $text-primary;
-    margin: 0;
   }
 
   .result-body {
