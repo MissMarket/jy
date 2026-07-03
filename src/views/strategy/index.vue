@@ -411,8 +411,8 @@
               class="trades-table"
               size="small"
             >
-              <ElTableColumn type="index" label="序号" width="60" />
-              <ElTableColumn prop="name" label="名称" />
+              <ElTableColumn type="index" label="序号" width="60" align="center" />
+              <ElTableColumn prop="name" label="名称" align="center" />
               <ElTableColumn prop="date" label="日期" align="center" />
               <ElTableColumn label="交易形态" align="center">
                 <template #default="{ row }">

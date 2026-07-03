@@ -85,43 +85,44 @@
               class="trades-table"
               size="small"
             >
-              <TableColumn type="index" label="序号" width="60" fixed />
-              <TableColumn prop="type" label="操作" width="80">
-                <template #default="{ row }">
-                  <span :class="['trade-type', row.type === '买入' ? 'buy' : 'sell']">{{
-                    row.type
-                  }}</span>
-                </template>
-              </TableColumn>
-              <TableColumn prop="day" label="交易日" width="90" />
-              <TableColumn prop="price" label="价格" width="90" align="right">
+              <TableColumn type="index" label="序号" width="90" align="center" />
+
+              <TableColumn prop="day" label="交易日" align="center" />
+              <TableColumn prop="price" label="价格" align="center">
                 <template #default="{ row }">
                   <span class="mono-num">¥{{ Number(row.price).toFixed(2) }}</span>
                 </template>
               </TableColumn>
-              <TableColumn prop="shares" label="股数" width="80" align="right">
+              <TableColumn prop="shares" label="股数" align="center">
                 <template #default="{ row }">
                   <span class="mono-num">{{ row.shares }}</span>
                 </template>
               </TableColumn>
-              <TableColumn label="金额" width="110" align="right">
+              <TableColumn label="金额" align="center">
                 <template #default="{ row }">
                   <span class="mono-num"
                     >¥{{ Number(row.cost || row.proceeds || 0).toLocaleString() }}</span
                   >
                 </template>
               </TableColumn>
-              <TableColumn prop="cash" label="现金" width="110" align="right">
+              <TableColumn prop="cash" label="现金" align="center">
                 <template #default="{ row }">
                   <span class="mono-num">¥{{ Number(row.cash).toLocaleString() }}</span>
                 </template>
               </TableColumn>
-              <TableColumn prop="position" label="持仓" width="80" align="right">
+              <TableColumn prop="position" label="持仓" align="center">
                 <template #default="{ row }">
                   <span class="mono-num">{{ row.position }}</span>
                 </template>
               </TableColumn>
-              <TableColumn prop="signal" label="信号" min-width="100" />
+              <TableColumn prop="signal" label="信号" align="center" />
+              <TableColumn prop="type" label="操作" align="center">
+                <template #default="{ row }">
+                  <span :class="['trade-type', row.type === '买入' ? 'buy' : 'sell']">{{
+                    row.type
+                  }}</span>
+                </template>
+              </TableColumn>
             </ElTable>
           </div>
           <div class="pagination-bar">
